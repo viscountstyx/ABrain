@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ABrain</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYOUT: left sidebar | centre canvas | right detail panel
+  ════════════════════════════════════════════════════════════════ -->
+
+  <div id="app">
+
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar">
+
+      <!-- Map list -->
+      <div id="map-list-panel">
+        <div class="panel-header">
+          <span class="panel-title">Maps</span>
+          <button id="btn-new-map" class="icon-btn" title="New map">＋</button>
+        </div>
+        <ul id="map-list"></ul>
+      </div>
+
+      <!-- Search + filter -->
+      <div id="search-panel">
+        <div class="panel-header">
+          <span class="panel-title">Search</span>
+        </div>
+        <input id="search-input" type="search" placeholder="Search nodes…" autocomplete="off" />
+
+        <div class="filter-section">
+          <span class="filter-label">Status</span>
+          <div id="filter-status" class="filter-chips">
+            <button class="chip active" data-filter-status="">All</button>
+            <button class="chip" data-filter-status="started">Started</button>
+            <button class="chip" data-filter-status="blocked">Blocked</button>
+            <button class="chip" data-filter-status="paused">Paused</button>
+            <button class="chip" data-filter-status="resolved">Resolved</button>
+            <button class="chip" data-filter-status="none">Unset</button>
+          </div>
+        </div>
+
+        <div class="filter-section">
+          <span class="filter-label">Priority</span>
+          <div id="filter-priority" class="filter-chips">
+            <button class="chip active" data-filter-priority="">All</button>
+            <button class="chip" data-filter-priority="high">High</button>
+            <button class="chip" data-filter-priority="medium">Medium</button>
+            <button class="chip" data-filter-priority="low">Low</button>
+          </div>
+        </div>
+
+        <div id="search-results"></div>
+      </div>
+
+    </aside>
+
+    <!-- CENTRE CANVAS -->
+    <main id="canvas-area">
+      <div id="canvas-toolbar">
+        <button id="btn-zoom-in"  class="tool-btn" title="Zoom in">＋</button>
+        <button id="btn-zoom-out" class="tool-btn" title="Zoom out">－</button>
+        <button id="btn-zoom-fit" class="tool-btn" title="Fit to screen">⊡</button>
+        <span class="toolbar-sep"></span>
+        <button id="btn-export-json" class="tool-btn" title="Export JSON">JSON</button>
+        <button id="btn-export-md"   class="tool-btn" title="Export Markdown">MD</button>
+      </div>
+
+      <svg id="mindmap-svg">
+        <g id="mindmap-root"></g>
+      </svg>
+
+      <!-- Empty state overlay (shown when active map has no nodes beyond root) -->
+      <div id="empty-state" class="hidden">
+        <div class="empty-state-inner">
+          <p>This map is empty.</p>
+          <button id="btn-add-root-node">＋ Add your first thought</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT DETAIL PANEL -->
+    <aside id="detail-panel" class="hidden">
+      <div class="panel-header">
+        <span class="panel-title">Node</span>
+        <button id="btn-close-detail" class="icon-btn" title="Close">✕</button>
+      </div>
+
+      <div id="detail-content">
+
+        <div class="field-group">
+          <label for="detail-title">Title</label>
+          <input id="detail-title" type="text" />
+        </div>
+
+        <div class="field-group">
+          <label>Status</label>
+          <div id="detail-status" class="status-buttons">
+            <button class="status-btn" data-status="">None</button>
+            <button class="status-btn status-started"  data-status="started">Started</button>
+            <button class="status-btn status-blocked"  data-status="blocked">Blocked</button>
+            <button class="status-btn status-paused"   data-status="paused">Paused</button>
+            <button class="status-btn status-resolved" data-status="resolved">Resolved</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="detail-priority">Priority</label>
+          <select id="detail-priority">
+            <option value="">— none —</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="detail-due">Due date</label>
+          <input id="detail-due" type="date" />
+        </div>
+
+        <div class="field-group">
+          <label for="detail-notes">Notes</label>
+          <textarea id="detail-notes" rows="5"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>Tags</label>
+          <div id="detail-tags-container">
+            <div id="detail-tags-pills"></div>
+            <input id="detail-tag-input" type="text" placeholder="Add tag, press Enter" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Attachments</label>
+          <div id="detail-attachments-list"></div>
+          <div class="attachment-add-row">
+            <input id="attach-url-input" type="url" placeholder="https://…" />
+            <button id="btn-attach-url">Add URL</button>
+          </div>
+          <div class="attachment-add-row">
+            <button id="btn-attach-file">Add File…</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Cross-map links</label>
+          <div id="detail-crosslinks-list"></div>
+          <button id="btn-add-crosslink">＋ Link to another map</button>
+        </div>
+
+        <div class="field-group field-group--danger">
+          <button id="btn-delete-node" class="danger-btn">Delete node</button>
+        </div>
+
+      </div>
+    </aside>
+
+  </div><!-- #app -->
+
+  <!-- CONTEXT MENU -->
+  <div id="context-menu" class="hidden">
+    <ul>
+      <li id="ctx-add-child">Add Child</li>
+      <li id="ctx-add-sibling">Add Sibling</li>
+      <li class="ctx-sep"></li>
+      <li id="ctx-add-crosslink">Link to Another Map…</li>
+      <li class="ctx-sep"></li>
+      <li id="ctx-delete" class="ctx-danger">Delete</li>
+    </ul>
+  </div>
+
+  <!-- CROSS-MAP LINK MODAL -->
+  <div id="crosslink-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span>Link to Another Map</span>
+        <button class="icon-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label for="crosslink-map-select">Map</label>
+        <select id="crosslink-map-select"></select>
+        <label for="crosslink-node-select">Node</label>
+        <select id="crosslink-node-select"></select>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-crosslink-confirm">Add Link</button>
+        <button class="modal-close">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW MAP MODAL -->
+  <div id="new-map-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span>New Map</span>
+        <button class="icon-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label for="new-map-name">Map name</label>
+        <input id="new-map-name" type="text" placeholder="e.g. Personal" />
+      </div>
+      <div class="modal-footer">
+        <button id="btn-new-map-confirm">Create</button>
+        <button class="modal-close">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts — order matters: d3 first, then state, then modules -->
+  <script src="js/d3.min.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/mindmap.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/bridge.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ABrain
+Comment=Mind map and brain-dump tool
+Exec=abrain
+Icon=abrain
+Terminal=false
+Type=Application
+Categories=Utility;Office;MindMapping;
+Keywords=mindmap;notes;brain;ideas;
+StartupNotify=true
