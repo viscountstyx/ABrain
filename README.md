@@ -36,14 +36,21 @@ python3  python3-venv  python3-pip  libgl1
 
 ## Installation
 
-### Option A — Debian package (recommended)
+### Option A — Download a release (easiest)
 
-Build and install a `.deb` that handles everything including the KDE launcher entry:
+Download the latest `.deb` from the [Releases](../../releases/latest) page, then:
+
+```bash
+sudo dpkg -i abrain_*.deb
+sudo apt-get install -f   # resolve any missing system dependencies
+```
+
+### Option B — Build the Debian package locally
 
 ```bash
 ./build-deb.sh
-sudo dpkg -i abrain_1.0.0_amd64.deb
-sudo apt-get install -f   # resolve any missing system dependencies
+sudo dpkg -i abrain_*.deb
+sudo apt-get install -f
 ```
 
 The package installs to `/opt/abrain/`, creates a Python virtualenv there, pip-installs all dependencies, and registers the app in the system application menu.
@@ -79,6 +86,20 @@ All user data is stored in `~/.local/share/abrain/`:
 | `{mapId}.json` | Individual map data |
 | `tasks.json` | Todo list |
 | `config.json` | Integration credentials (mode 0600) |
+
+## Releasing a new version
+
+1. Add a `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`
+2. Update the `VERSION` file
+3. Commit both files
+4. Push a tag — GitHub Actions builds the `.deb` and publishes it as a release:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The release body is populated automatically from the matching `CHANGELOG.md` section.
 
 ## Integrations
 

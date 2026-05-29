@@ -4,8 +4,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_NAME="abrain"
-VERSION="1.0.0"
-ARCH="amd64"
+VERSION="${VERSION:-$(tr -d '[:space:]' < "${SCRIPT_DIR}/VERSION")}"
+ARCH="${ARCH:-amd64}"
 DEB_FILE="${SCRIPT_DIR}/${PKG_NAME}_${VERSION}_${ARCH}.deb"
 STAGE="${SCRIPT_DIR}/.deb-stage"
 
