@@ -94,6 +94,7 @@ const State = (() => {
         priority:      n.priority,
         attachments:   n.attachments.map(a => Object.assign({}, a)),
         crossMapLinks: n.crossMapLinks.map(l => Object.assign({}, l)),
+        color:         n.color || null,
         createdAt:     n.createdAt,
         updatedAt:     n.updatedAt,
       };

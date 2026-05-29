@@ -12,8 +12,11 @@ const MindMap = (() => {
 
   let _svg, _root, _zoom;
   let _width = 800, _height = 600;
-  let _dimmedIds  = new Set(); // node IDs to dim (from search/filter)
-  let _highlightId = null;     // node to pan to
+  let _dimmedIds   = new Set(); // node IDs to dim (from search/filter)
+  let _highlightId = null;      // node to pan to
+  let _collapsedIds = new Set(); // node IDs whose children are hidden
+
+  const COLLAPSED_KEY = "abrain-collapsed";
 
   const STATUS_COLOR = {
     null:      "var(--node-none)",
@@ -62,19 +65,51 @@ const MindMap = (() => {
     // Empty-state button
     document.getElementById("btn-add-root-node").addEventListener("click", () => {
       const rootId = State.getRootNodeId();
-      if (rootId) State.addNode(rootId, "New thought");
+      if (rootId) {
+        const newId = State.addNode(rootId, "New thought");
+        Detail.open(newId);
+      }
     });
 
     // Subscribe to state changes
-    State.subscribe(render);
+    State.subscribe(() => { _loadCollapsed(); render(); });
+    _loadCollapsed();
   }
 
   function _resize() {
     const el = document.getElementById("canvas-area");
     if (!el) return;
-    const toolbar = document.getElementById("canvas-toolbar");
+    const toolbar   = document.getElementById("canvas-toolbar");
+    const filterBar = document.getElementById("filter-bar");
+    const toolbarH  = toolbar   ? toolbar.clientHeight   : 0;
+    const filterH   = filterBar && !filterBar.classList.contains("hidden") ? filterBar.clientHeight : 0;
     _width  = el.clientWidth;
-    _height = el.clientHeight - (toolbar ? toolbar.clientHeight : 0);
+    _height = el.clientHeight - toolbarH - filterH;
+  }
+
+  // ── Collapse persistence ──────────────────────────────────────────────
+
+  function _loadCollapsed() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || "{}");
+      const mapId = State.getMapId();
+      _collapsedIds = new Set(saved[mapId] || []);
+    } catch { _collapsedIds = new Set(); }
+  }
+
+  function _saveCollapsed() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || "{}");
+      saved[State.getMapId()] = [..._collapsedIds];
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(saved));
+    } catch {}
+  }
+
+  function _toggleCollapse(nodeId) {
+    if (_collapsedIds.has(nodeId)) _collapsedIds.delete(nodeId);
+    else _collapsedIds.add(nodeId);
+    _saveCollapsed();
+    render();
   }
 
   // ── Build D3 hierarchy from flat node store ───────────────────────────
@@ -87,14 +122,17 @@ const MindMap = (() => {
     function buildNode(id) {
       const n = nodes[id];
       if (!n) return null;
+      const collapsed = _collapsedIds.has(id);
       return {
         id:            n.id,
         title:         n.title,
         status:        n.status,
+        priority:      n.priority,
+        color:         n.color,
+        collapsed,
+        hiddenChildCount: collapsed ? n.childIds.length : 0,
         crossMapLinks: n.crossMapLinks || [],
-        children:      n.childIds
-                         .map(buildNode)
-                         .filter(Boolean),
+        children:      collapsed ? [] : n.childIds.map(buildNode).filter(Boolean),
       };
     }
     return buildNode(rootId);
@@ -119,14 +157,14 @@ const MindMap = (() => {
     const root = d3.hierarchy(hierarchyData);
     const nodeCount = root.descendants().length;
 
-    // Scale radius by tree density
-    const baseRadius = Math.min(_width, _height) * 0.38;
-    const radius = nodeCount > 20 ? baseRadius * (1 + (nodeCount - 20) * 0.012) : baseRadius;
+    // Scale radius by tree density — tighter base, slower growth
+    const baseRadius = Math.min(_width, _height) * 0.28;
+    const radius = nodeCount > 20 ? baseRadius * (1 + (nodeCount - 20) * 0.007) : baseRadius;
 
-    // Radial tree layout
+    // Radial tree layout — tighter separation
     const treeLayout = d3.tree()
       .size([2 * Math.PI, radius])
-      .separation((a, b) => (a.parent === b.parent ? 1 : 1.5) / a.depth);
+      .separation((a, b) => (a.parent === b.parent ? 0.7 : 1.1) / a.depth);
 
     treeLayout(root);
 
@@ -171,7 +209,9 @@ const MindMap = (() => {
         const dimmed      = _dimmedIds.has(d.data.id) ? " dimmed" : "";
         return `node-circle ${statusClass}${selected}${dimmed}`;
       })
-      .attr("r", d => d.depth === 0 ? 18 : Math.max(8, 14 - d.depth * 1.5));
+      .attr("r", d => d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2))
+      .style("fill", d => d.data.color || null)
+      .style("stroke", d => d.data.color || null);
 
     // Labels
     nodeG.append("text")
@@ -182,17 +222,35 @@ const MindMap = (() => {
       })
       .attr("dx", d => {
         if (d.depth === 0) return 0;
-        const r = Math.max(8, 14 - d.depth * 1.5);
-        return d.x_cart > 0 ? r + 5 : -(r + 5);
+        const r = Math.max(6, 11 - d.depth * 1.2);
+        return d.x_cart > 0 ? r + 4 : -(r + 4);
       })
-      .attr("dy", d => d.depth === 0 ? "0.35em" : "0.35em")
+      .attr("dy", d => d.depth === 0 ? 20 : 0)
+      .attr("dominant-baseline", d => d.depth === 0 ? "hanging" : "central")
       .text(d => {
-        const max = 22;
+        const max = Settings.getNodeLabelLength();
         return d.data.title.length > max ? d.data.title.slice(0, max) + "…" : d.data.title;
       });
 
     // Tooltips (title attribute)
-    nodeG.append("title").text(d => d.data.title);
+    nodeG.append("title").text(d => {
+      const suffix = d.data.collapsed && d.data.hiddenChildCount > 0
+        ? ` [${d.data.hiddenChildCount} hidden — Ctrl+click to expand]`
+        : (d.data.childIds?.length > 0 && d.depth > 0 ? " [Ctrl+click to collapse]" : "");
+      return d.data.title + suffix;
+    });
+
+    // Collapse badge (shown when node has hidden children)
+    nodeG.filter(d => d.data.collapsed && d.data.hiddenChildCount > 0)
+      .append("text")
+      .attr("class", "collapse-badge")
+      .attr("dx", d => {
+        const r = Math.max(6, 11 - d.depth * 1.2);
+        return d.x_cart >= 0 ? r + 2 : -(r + 2);
+      })
+      .attr("dy", d => d.depth === 0 ? -6 : -8)
+      .attr("text-anchor", d => d.x_cart >= 0 ? "start" : "end")
+      .text(d => `+${d.data.hiddenChildCount}`);
 
     // ── Ghost nodes (cross-map links) ──
     _renderGhostNodes(g, root.descendants());
@@ -202,17 +260,98 @@ const MindMap = (() => {
       .on("click", (e, d) => {
         e.stopPropagation();
         ContextMenu.hide();
+        // Ctrl+click toggles collapse; plain click always opens detail
+        if (e.ctrlKey) {
+          const hasChildren = (State.getNode(d.data.id)?.childIds?.length || 0) > 0;
+          if (hasChildren && d.depth > 0) {
+            _toggleCollapse(d.data.id);
+            return;
+          }
+        }
         State.selectNode(d.data.id);
+        Detail.open(d.data.id);
       })
       .on("dblclick", (e, d) => {
         e.stopPropagation();
         State.selectNode(d.data.id);
+        Detail.open(d.data.id);
         setTimeout(() => Detail.focusTitleInput(), 20);
       })
       .on("contextmenu", (e, d) => {
         e.preventDefault();
         e.stopPropagation();
+        State.selectNode(d.data.id);
         ContextMenu.show(e.clientX, e.clientY, d.data.id);
+      })
+      .call(_makeDrag(root));
+  }
+
+  // ── Drag-to-reparent ──────────────────────────────────────────────────
+
+  function _makeDrag(root) {
+    let _dragNodeId   = null;
+    let _dropTargetId = null;
+    let _dragEl       = null;
+
+    function _nodeAtPoint(svgEl, x, y, excludeId) {
+      let best = null, bestDist = 40; // snap radius px
+      root.descendants().forEach(d => {
+        if (d.data.id === excludeId) return;
+        const t = d3.zoomTransform(svgEl);
+        const sx = t.x + t.k * (_width  / 2 + d.x_cart);
+        const sy = t.y + t.k * (_height / 2 + d.y_cart);
+        const dist = Math.hypot(sx - x, sy - y);
+        if (dist < bestDist) { bestDist = dist; best = d; }
+      });
+      return best;
+    }
+
+    const DRAG_THRESHOLD = 8; // px — ignore tiny mouse wobbles
+    let _dragMoved = false;
+
+    return d3.drag()
+      .filter(e => !e.ctrlKey && !e.button) // Ctrl+click is collapse, not drag
+      .on("start", function(e, d) {
+        if (d.depth === 0) return; // root not draggable
+        _dragMoved = false;
+        _dragNodeId = d.data.id;
+        _dragEl = d3.select(this);
+        // Don't stopPropagation here — that was blocking click events
+      })
+      .on("drag", function(e, d) {
+        if (!_dragNodeId) return;
+        const dist = Math.hypot(e.dx, e.dy);
+        if (!_dragMoved && dist < DRAG_THRESHOLD) return; // ignore tiny movements
+        _dragMoved = true;
+        _dragEl.raise().classed("dragging", true);
+        // Move the dragged group visually
+        _dragEl.attr("transform", `translate(${d.x_cart + e.dx},${d.y_cart + e.dy})`);
+        d.x_cart += e.dx;
+        d.y_cart += e.dy;
+        // Highlight nearest valid drop target
+        const candidate = _nodeAtPoint(_svg.node(), e.sourceEvent.clientX, e.sourceEvent.clientY, _dragNodeId);
+        if (candidate && candidate.data.id !== _dropTargetId) {
+          _svg.selectAll(".node-circle").classed("drop-target", false);
+          _dropTargetId = candidate.data.id;
+          _svg.selectAll(".node-group")
+            .filter(nd => nd.data.id === _dropTargetId)
+            .select("circle").classed("drop-target", true);
+        } else if (!candidate) {
+          _svg.selectAll(".node-circle").classed("drop-target", false);
+          _dropTargetId = null;
+        }
+      })
+      .on("end", function(e) {
+        if (!_dragNodeId) return;
+        _dragEl.classed("dragging", false);
+        _svg.selectAll(".node-circle").classed("drop-target", false);
+        if (_dragMoved && _dropTargetId && _dropTargetId !== _dragNodeId) {
+          State.moveNode(_dragNodeId, _dropTargetId);
+        } else if (_dragMoved) {
+          render(); // revert visual position if dropped on nothing
+        }
+        _dragNodeId = _dropTargetId = _dragEl = null;
+        _dragMoved = false;
       });
   }
 
@@ -300,8 +439,11 @@ const MindMap = (() => {
     _svg.selectAll(".node-group").each(function(d) {
       if (d.data.id === nodeId) {
         const transform = d3.zoomTransform(_svg.node());
-        const cx = _width  / 2 - transform.k * d.x_cart;
-        const cy = _height / 2 - transform.k * d.y_cart;
+        // Nodes are in a group offset by (_width/2, _height/2), so canvas
+        // position = (_width/2 + x_cart, _height/2 + y_cart). Solve for the
+        // zoom translate that places that point at screen centre.
+        const cx = _width  / 2 - transform.k * (_width  / 2 + d.x_cart);
+        const cy = _height / 2 - transform.k * (_height / 2 + d.y_cart);
         _svg.transition().duration(450)
           .call(_zoom.transform, d3.zoomIdentity.translate(cx, cy).scale(transform.k));
       }

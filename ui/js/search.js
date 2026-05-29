@@ -94,11 +94,33 @@ const Search = (() => {
       dot.className = "result-status-dot";
       dot.style.background = STATUS_DOT_COLOR[node.status || ""] || STATUS_DOT_COLOR[""];
 
+      const body = document.createElement("span");
+      body.className = "search-result-body";
+
       const text = document.createElement("span");
       text.textContent = node.title;
+      body.appendChild(text);
+
+      // Show note snippet when the match is in notes but not in title
+      if (_query) {
+        const ql = _query.toLowerCase();
+        const inTitle = node.title && node.title.toLowerCase().includes(ql);
+        if (!inTitle && node.notes && node.notes.toLowerCase().includes(ql)) {
+          const idx = node.notes.toLowerCase().indexOf(ql);
+          const start = Math.max(0, idx - 30);
+          const end   = Math.min(node.notes.length, idx + _query.length + 30);
+          const snippet = (start > 0 ? "…" : "") +
+            node.notes.slice(start, end).replace(/\n/g, " ") +
+            (end < node.notes.length ? "…" : "");
+          const snip = document.createElement("span");
+          snip.className = "search-result-snippet";
+          snip.textContent = snippet;
+          body.appendChild(snip);
+        }
+      }
 
       item.appendChild(dot);
-      item.appendChild(text);
+      item.appendChild(body);
 
       item.addEventListener("click", () => {
         State.selectNode(node.id);
@@ -130,11 +152,13 @@ const Search = (() => {
     const searchInput = document.getElementById("search-input");
     searchInput.addEventListener("input", e => {
       _query = e.target.value.trim();
+      document.getElementById("search-results").classList.toggle("hidden", !_query);
       _schedule();
     });
     searchInput.addEventListener("search", () => {
       // Fires when the ✕ clear button is clicked
       _query = "";
+      document.getElementById("search-results").classList.add("hidden");
       _schedule();
     });
 
@@ -156,6 +180,28 @@ const Search = (() => {
         _filterPriority = chip.dataset.filterPriority;
         _schedule();
       });
+    });
+
+    // Filter bar toggle
+    const filterBar = document.getElementById("filter-bar");
+    const filterBtn = document.getElementById("btn-filter-toggle");
+    filterBtn.addEventListener("click", () => {
+      const hidden = filterBar.classList.toggle("hidden");
+      filterBtn.classList.toggle("active", !hidden);
+      MindMap.render(); // recalculate SVG height
+    });
+
+    // Hide results when clicking outside the search wrap
+    document.addEventListener("click", e => {
+      const wrap = document.getElementById("search-wrap");
+      if (!wrap.contains(e.target)) {
+        document.getElementById("search-results").classList.add("hidden");
+      }
+    });
+    document.getElementById("search-input").addEventListener("focus", () => {
+      if (_query || _filterStatus || _filterPriority) {
+        document.getElementById("search-results").classList.remove("hidden");
+      }
     });
 
     // Re-run on map switch (state change resets search results automatically

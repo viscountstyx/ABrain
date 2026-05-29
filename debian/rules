@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	# App files
+	install -d debian/abrain/opt/abrain
+	cp -r main.py api.py requirements.txt ui debian/abrain/opt/abrain/
+
+	# Wrapper script
+	install -d debian/abrain/usr/bin
+	install -m 755 /dev/stdin debian/abrain/usr/bin/abrain <<'EOF'
+#!/bin/bash
+exec /opt/abrain/.venv/bin/python /opt/abrain/main.py "$$@"
+EOF
+
+	# Desktop integration
+	install -d debian/abrain/usr/share/applications
+	install -m 644 abrain.desktop debian/abrain/usr/share/applications/
+
+	install -d debian/abrain/usr/share/icons/hicolor/scalable/apps
+	install -m 644 ui/icons/abrain.svg \
+		debian/abrain/usr/share/icons/hicolor/scalable/apps/abrain.svg

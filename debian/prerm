@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    remove|purge)
+        rm -rf /opt/abrain/.venv
+        ;;
+esac
+
+#DEBHELPER#

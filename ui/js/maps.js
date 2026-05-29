@@ -49,6 +49,10 @@ const Maps = (() => {
 
     renderMapList();
     _onSwitchCallbacks.forEach(fn => fn(mapId));
+
+    if (Settings.getAutoFit()) {
+      setTimeout(() => MindMap.fitToScreen(), 100);
+    }
   }
 
   // ── Create ───────────────────────────────────────────────────────────

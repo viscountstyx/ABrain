@@ -9,7 +9,7 @@
 <body>
 
   <!-- ═══════════════════════════════════════════════════════════
-       LAYOUT: left sidebar | centre canvas | right detail panel
+       LAYOUT: left sidebar | centre canvas
   ════════════════════════════════════════════════════════════════ -->
 
   <div id="app">
@@ -26,14 +26,100 @@
         <ul id="map-list"></ul>
       </div>
 
-      <!-- Search + filter -->
-      <div id="search-panel">
-        <div class="panel-header">
-          <span class="panel-title">Search</span>
-        </div>
-        <input id="search-input" type="search" placeholder="Search nodes…" autocomplete="off" />
 
-        <div class="filter-section">
+      <!-- Tasks section -->
+      <section id="tasks-section">
+        <div class="panel-header tasks-section-header">
+          <span class="panel-title">Tasks</span>
+          <button id="btn-tasks-refresh" class="icon-btn" title="Refresh Jira &amp; Calendar">↺</button>
+        </div>
+
+        <!-- Todos subsection -->
+        <div class="tasks-subsection">
+          <div class="tasks-sub-header" data-key="todos">
+            <span class="tasks-sub-title">Todos</span>
+            <span class="tasks-sub-count" id="todos-count"></span>
+            <span class="tasks-sub-arrow">▾</span>
+          </div>
+          <div class="tasks-sub-body" id="todos-body">
+            <div class="todo-add-row">
+              <input id="todo-add-input" type="text" placeholder="Add a task…" autocomplete="off" />
+              <select id="todo-add-recur" title="Recurrence">
+                <option value="none">Once</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div id="todo-list"></div>
+            <div class="section-resizer" id="todo-list-resizer"></div>
+          </div>
+        </div>
+
+        <!-- Jira subsection -->
+        <div class="tasks-subsection">
+          <div class="tasks-sub-header" data-key="jira">
+            <span class="tasks-sub-title">Jira</span>
+            <span class="tasks-sub-count" id="jira-count"></span>
+            <span class="tasks-sub-arrow">▾</span>
+          </div>
+          <div class="tasks-sub-body" id="jira-body">
+            <div id="jira-list"></div>
+            <div class="section-resizer" id="jira-list-resizer"></div>
+          </div>
+        </div>
+
+        <!-- Calendar subsection -->
+        <div class="tasks-subsection">
+          <div class="tasks-sub-header" data-key="cal">
+            <span class="tasks-sub-title">Calendar</span>
+            <span class="tasks-sub-count" id="cal-count"></span>
+            <span class="tasks-sub-arrow">▾</span>
+          </div>
+          <div class="tasks-sub-body" id="cal-body">
+            <div id="cal-list"></div>
+            <div class="section-resizer" id="cal-list-resizer"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recently visited -->
+      <section id="recent-section">
+        <div class="panel-header">
+          <span class="panel-title">Recent</span>
+        </div>
+        <div id="recent-list"></div>
+      </section>
+
+      <div id="sidebar-resizer" class="col-resizer col-resizer--right"></div>
+    </aside>
+
+    <!-- CENTRE CANVAS -->
+    <main id="canvas-area">
+      <div id="canvas-toolbar">
+        <button id="btn-zoom-in"  class="tool-btn" title="Zoom in">＋</button>
+        <button id="btn-zoom-out" class="tool-btn" title="Zoom out">－</button>
+        <button id="btn-zoom-fit" class="tool-btn" title="Fit to screen">⊡</button>
+        <span class="toolbar-sep"></span>
+
+        <!-- Search -->
+        <div id="search-wrap">
+          <input id="search-input" type="search" placeholder="Search nodes… (Ctrl+F)" autocomplete="off" />
+          <button id="btn-filter-toggle" class="tool-btn" title="Toggle filters">⊟</button>
+          <div id="search-results"></div>
+        </div>
+
+        <span class="toolbar-sep"></span>
+        <button id="btn-export-json" class="tool-btn" title="Export JSON">JSON</button>
+        <button id="btn-export-md"   class="tool-btn" title="Export Markdown">MD</button>
+        <button id="btn-export-png"  class="tool-btn" title="Export PNG image">PNG</button>
+        <span class="toolbar-sep"></span>
+        <button id="btn-open-settings" class="tool-btn" title="Settings">⚙</button>
+      </div>
+
+      <!-- Filter bar (shown when toggled) -->
+      <div id="filter-bar" class="hidden">
+        <div class="filter-group">
           <span class="filter-label">Status</span>
           <div id="filter-status" class="filter-chips">
             <button class="chip active" data-filter-status="">All</button>
@@ -44,8 +130,7 @@
             <button class="chip" data-filter-status="none">Unset</button>
           </div>
         </div>
-
-        <div class="filter-section">
+        <div class="filter-group">
           <span class="filter-label">Priority</span>
           <div id="filter-priority" class="filter-chips">
             <button class="chip active" data-filter-priority="">All</button>
@@ -54,21 +139,6 @@
             <button class="chip" data-filter-priority="low">Low</button>
           </div>
         </div>
-
-        <div id="search-results"></div>
-      </div>
-
-    </aside>
-
-    <!-- CENTRE CANVAS -->
-    <main id="canvas-area">
-      <div id="canvas-toolbar">
-        <button id="btn-zoom-in"  class="tool-btn" title="Zoom in">＋</button>
-        <button id="btn-zoom-out" class="tool-btn" title="Zoom out">－</button>
-        <button id="btn-zoom-fit" class="tool-btn" title="Fit to screen">⊡</button>
-        <span class="toolbar-sep"></span>
-        <button id="btn-export-json" class="tool-btn" title="Export JSON">JSON</button>
-        <button id="btn-export-md"   class="tool-btn" title="Export Markdown">MD</button>
       </div>
 
       <svg id="mindmap-svg">
@@ -84,13 +154,27 @@
       </div>
     </main>
 
-    <!-- RIGHT DETAIL PANEL -->
-    <aside id="detail-panel" class="hidden">
+    <!-- RIGHT AGENDA PANEL -->
+    <aside id="agenda-panel">
+      <div id="agenda-resizer" class="col-resizer col-resizer--left"></div>
       <div class="panel-header">
-        <span class="panel-title">Node</span>
-        <button id="btn-close-detail" class="icon-btn" title="Close">✕</button>
+        <span class="panel-title">Agenda</span>
       </div>
+      <div class="agenda-quick-add">
+        <input id="agenda-quick-input" type="text" placeholder="＋ Add node to map…" autocomplete="off" />
+      </div>
+      <div id="agenda-list"></div>
+    </aside>
 
+  </div><!-- #app -->
+
+  <!-- NODE DETAIL MODAL -->
+  <div id="node-modal" class="modal-backdrop hidden">
+    <div class="modal modal--node">
+      <div class="modal-header">
+        <span class="panel-title">Node</span>
+        <button id="btn-close-detail" class="icon-btn">✕</button>
+      </div>
       <div id="detail-content">
 
         <div class="field-group">
@@ -110,6 +194,14 @@
         </div>
 
         <div class="field-group">
+          <label>Colour</label>
+          <div class="color-row">
+            <input id="detail-color" type="color" title="Node colour override" />
+            <button id="btn-clear-color" class="inherit-due-btn" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div class="field-group">
           <label for="detail-priority">Priority</label>
           <select id="detail-priority">
             <option value="">— none —</option>
@@ -121,7 +213,10 @@
 
         <div class="field-group">
           <label for="detail-due">Due date</label>
-          <input id="detail-due" type="date" />
+          <div class="due-row">
+            <input id="detail-due" type="date" />
+            <button id="btn-inherit-due" class="inherit-due-btn" title="Use parent's due date" type="button">Inherit from parent</button>
+          </div>
         </div>
 
         <div class="field-group">
@@ -155,14 +250,232 @@
           <button id="btn-add-crosslink">＋ Link to another map</button>
         </div>
 
-        <div class="field-group field-group--danger">
-          <button id="btn-delete-node" class="danger-btn">Delete node</button>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-done-node">Done</button>
+        <button id="btn-delete-node" class="danger-btn">Delete node</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal modal--settings">
+      <div class="modal-header">
+        <span class="panel-title">Settings</span>
+        <button class="icon-btn modal-close">✕</button>
+      </div>
+
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="interface">Interface</button>
+        <button class="settings-tab" data-tab="data">Data &amp; Maps</button>
+        <button class="settings-tab" data-tab="integrations">Integrations</button>
+      </div>
+
+      <div class="settings-body">
+
+        <!-- INTERFACE TAB -->
+        <div class="settings-panel" id="settings-panel-interface">
+          <div class="settings-section">
+            <div class="settings-section-title">Appearance</div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-font-size">Font size</label>
+              <div class="settings-control">
+                <select id="settings-font-size">
+                  <option value="small">Small (12px)</option>
+                  <option value="medium">Medium (14px)</option>
+                  <option value="large">Large (16px)</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-label-length">Node label length</label>
+              <div class="settings-control settings-slider-row">
+                <input id="settings-label-length" type="range" min="10" max="60" step="1" value="26" />
+                <span id="settings-label-length-display" class="settings-slider-val">26 chars</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Behaviour</div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-autosave">Auto-save delay</label>
+              <div class="settings-control settings-slider-row">
+                <input id="settings-autosave" type="range" min="500" max="5000" step="100" value="1200" />
+                <span id="settings-autosave-display" class="settings-slider-val">1200ms</span>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-default-node-text">Default new node text</label>
+              <div class="settings-control">
+                <input id="settings-default-node-text" type="text" placeholder="New thought" />
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label">Confirm before delete</label>
+              <div class="settings-control">
+                <label class="settings-toggle">
+                  <input id="settings-confirm-delete" type="checkbox" checked />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label">Auto-fit on map switch</label>
+              <div class="settings-control">
+                <label class="settings-toggle">
+                  <input id="settings-auto-fit" type="checkbox" />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Panels</div>
+            <div class="settings-row">
+              <label class="settings-label">Show agenda panel</label>
+              <div class="settings-control">
+                <label class="settings-toggle">
+                  <input id="settings-show-agenda" type="checkbox" checked />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label">Show Tasks section</label>
+              <div class="settings-control">
+                <label class="settings-toggle">
+                  <input id="settings-show-tasks" type="checkbox" checked />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label">Show Recent section</label>
+              <div class="settings-control">
+                <label class="settings-toggle">
+                  <input id="settings-show-recent" type="checkbox" checked />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">History</div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-max-recent">Max recent items</label>
+              <div class="settings-control">
+                <select id="settings-max-recent">
+                  <option value="4">4</option>
+                  <option value="8">8</option>
+                  <option value="12">12</option>
+                  <option value="16">16</option>
+                  <option value="24">24</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
 
-      </div>
-    </aside>
+        <!-- DATA & MAPS TAB -->
+        <div class="settings-panel hidden" id="settings-panel-data">
+          <div class="settings-section">
+            <div class="settings-section-title">Maps</div>
+            <div id="settings-maps-list" class="settings-maps-list"></div>
+          </div>
 
-  </div><!-- #app -->
+          <div class="settings-section">
+            <div class="settings-section-title">Cross-map Links</div>
+            <p class="settings-description">Find and remove links pointing to maps or nodes that no longer exist.</p>
+            <div class="settings-action-row">
+              <button id="btn-scan-broken-links" class="settings-btn">Scan for broken links</button>
+              <button id="btn-fix-broken-links" class="settings-btn settings-btn--danger hidden">Remove all broken links</button>
+            </div>
+            <div id="settings-broken-links-result"></div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Clear Old Maps</div>
+            <p class="settings-description">Find and permanently remove maps that have not been updated recently. The currently active map is always excluded.</p>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-old-maps-days">Not updated in</label>
+              <div class="settings-control">
+                <select id="settings-old-maps-days">
+                  <option value="30">30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">6 months</option>
+                  <option value="365">1 year</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-action-row">
+              <button id="btn-scan-old-maps" class="settings-btn">Find old maps</button>
+              <button id="btn-delete-old-maps" class="settings-btn settings-btn--danger hidden">Delete all listed</button>
+            </div>
+            <div id="settings-old-maps-result"></div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Maintenance</div>
+            <div id="settings-data-feedback" class="settings-feedback"></div>
+            <div class="settings-action-row">
+              <button id="btn-clear-recent" class="settings-btn">Clear recently visited</button>
+              <button id="btn-clear-collapsed" class="settings-btn">Reset collapsed nodes</button>
+            </div>
+            <div class="settings-action-row">
+              <button id="btn-reset-sizes" class="settings-btn">Reset panel sizes</button>
+              <button id="btn-open-data-dir" class="settings-btn">Open data folder</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- INTEGRATIONS TAB -->
+        <div class="settings-panel hidden" id="settings-panel-integrations">
+          <div class="settings-section">
+            <div class="settings-section-title">Jira</div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-int-jira-url">URL</label>
+              <div class="settings-control">
+                <input id="settings-int-jira-url" type="url" placeholder="https://yourcompany.atlassian.net" />
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-int-jira-user">Username (email)</label>
+              <div class="settings-control">
+                <input id="settings-int-jira-user" type="text" placeholder="you@example.com" />
+              </div>
+            </div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-int-jira-token">API token</label>
+              <div class="settings-control">
+                <input id="settings-int-jira-token" type="password" placeholder="API token" />
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Google Calendar</div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-int-cal-url">ICS URL</label>
+              <div class="settings-control">
+                <input id="settings-int-cal-url" type="url" placeholder="https://calendar.google.com/…/basic.ics" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- .settings-body -->
+
+      <div class="modal-footer">
+        <button id="btn-settings-save" class="settings-btn settings-btn--primary">Save</button>
+        <button class="modal-close settings-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- CONTEXT MENU -->
   <div id="context-menu" class="hidden">
@@ -221,6 +534,10 @@
   <script src="js/mindmap.js"></script>
   <script src="js/detail.js"></script>
   <script src="js/search.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/agenda.js"></script>
+  <script src="js/resizer.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/bridge.js"></script>
 
 </body>

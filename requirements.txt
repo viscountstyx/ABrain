@@ -1,2 +1,4 @@
 pywebview[qt]
 PySide6
+icalendar
+recurring-ical-events

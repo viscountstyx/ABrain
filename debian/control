@@ -1,0 +1,17 @@
+Source: abrain
+Section: utils
+Priority: optional
+Maintainer: Andrew Faulkner <andrew.faulkner@fasthosts.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+
+Package: abrain
+Architecture: amd64
+Depends: ${misc:Depends}, python3, python3-venv, python3-pip, libgl1
+Description: Mind map and brain-dump tool
+ ABrain is an interactive mind-mapping and note-taking application
+ built on PyWebView and Qt6, with KDE Plasma integration.
+ .
+ Features: multi-map projects with cross-linking, todo lists with
+ recurrence, Jira and Google Calendar integration, node metadata
+ (status, priority, due dates, tags, attachments, notes).

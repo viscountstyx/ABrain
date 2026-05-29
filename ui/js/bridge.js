@@ -11,13 +11,12 @@
 
 const Bridge = (() => {
   let _saveTimer = null;
-  const SAVE_DELAY_MS = 1200;
 
   // ── Auto-save ────────────────────────────────────────────────────────
 
   function _scheduleSave() {
     clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(_doSave, SAVE_DELAY_MS);
+    _saveTimer = setTimeout(_doSave, Settings.getAutosaveDelay());
   }
 
   async function _doSave() {
@@ -64,8 +63,19 @@ const Bridge = (() => {
     Maps.renderMapList();
     Maps._wireUI();
 
+    // Load saved UI config and apply before anything renders
+    try {
+      const cfg = await window.pywebview.api.load_config();
+      Settings.applyUiSettings(cfg.ui || {});
+    } catch (_) { /* non-fatal — use defaults */ }
+
     // Register auto-save on every state change
     State.subscribe(_scheduleSave);
+
+    Tasks.init().catch(err => console.error("Tasks init failed:", err));
+    Agenda.init();
+    Resizer.init();
+    Settings.init();
 
     _wireExportButtons();
     _wireKeyboardShortcuts();
@@ -88,6 +98,31 @@ const Bridge = (() => {
       );
       if (!result.path) return;
       await window.pywebview.api.export_markdown(result.path, State.snapshot());
+    });
+
+    document.getElementById("btn-export-png").addEventListener("click", async () => {
+      const result = await window.pywebview.api.pick_save_path(
+        `${State.getMapName() || "map"}.png`
+      );
+      if (!result.path) return;
+      const svg = document.getElementById("mindmap-svg");
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement("canvas");
+      const rect = svg.getBoundingClientRect();
+      canvas.width  = rect.width  || 1200;
+      canvas.height = rect.height || 800;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-base").trim() || "#1e1e2e";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const img = new Image();
+      img.onload = async () => {
+        ctx.drawImage(img, 0, 0);
+        const dataUrl  = canvas.toDataURL("image/png");
+        const b64      = dataUrl.split(",")[1];
+        await window.pywebview.api.export_png(result.path, b64);
+      };
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
     });
   }
 
@@ -117,7 +152,8 @@ const Bridge = (() => {
         e.preventDefault();
         const parentId = State.getSelectedId() || State.getRootNodeId();
         if (parentId) {
-          const newId = State.addNode(parentId, "New thought");
+          const newId = State.addNode(parentId, Settings.getDefaultNodeText());
+          Detail.open(newId);
           setTimeout(() => Detail.focusTitleInput(), 30);
         }
         return;
@@ -138,10 +174,65 @@ const Bridge = (() => {
         if (!node) return;
         if (node.id === State.getRootNodeId()) return;
         const hasChildren = node.childIds && node.childIds.length > 0;
-        if (hasChildren) {
+        if (Settings.getConfirmDelete() && hasChildren) {
           if (!confirm(`Delete "${node.title}" and all its children?`)) return;
         }
         State.deleteNode(node.id);
+        return;
+      }
+
+      // Enter — open detail for selected node
+      if (e.key === "Enter") {
+        const sel = State.getSelectedId();
+        if (sel) { Detail.open(sel); setTimeout(() => Detail.focusTitleInput(), 30); }
+        return;
+      }
+
+      // Arrow keys — navigate the tree
+      if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) {
+        e.preventDefault();
+        const node = State.getSelectedNode();
+        if (!node) {
+          // Nothing selected — select root
+          const rootId = State.getRootNodeId();
+          if (rootId) { State.selectNode(rootId); MindMap.focusNode(rootId); }
+          return;
+        }
+        const allNodes = State.getAllNodes();
+        let targetId = null;
+        if (e.key === "ArrowLeft") {
+          // Move to parent
+          targetId = node.parentId || null;
+        } else if (e.key === "ArrowRight") {
+          // Move to first child
+          targetId = (node.childIds && node.childIds[0]) || null;
+        } else {
+          // Up/Down — move to prev/next sibling
+          const parent = node.parentId ? allNodes[node.parentId] : null;
+          const siblings = parent ? parent.childIds : [];
+          const idx = siblings.indexOf(node.id);
+          if (idx !== -1) {
+            targetId = e.key === "ArrowUp"
+              ? (siblings[idx - 1] || null)
+              : (siblings[idx + 1] || null);
+          }
+        }
+        if (targetId) {
+          State.selectNode(targetId);
+          MindMap.focusNode(targetId);
+        }
+        return;
+      }
+
+      // Tab — add child to selected node
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const parentId = State.getSelectedId() || State.getRootNodeId();
+        if (parentId) {
+          const newId = State.addNode(parentId, Settings.getDefaultNodeText());
+          Detail.open(newId);
+          setTimeout(() => Detail.focusTitleInput(), 30);
+        }
         return;
       }
     });
@@ -171,6 +262,7 @@ const Bridge = (() => {
   return { init, forceSave };
 })();
 
+
 // ── Context menu singleton (used across modules) ──────────────────────
 
 const ContextMenu = (() => {
@@ -195,13 +287,21 @@ const ContextMenu = (() => {
   // Wire items
   document.getElementById("ctx-add-child").addEventListener("click", () => {
     const id = State.getSelectedId();
-    if (id) { State.addNode(id, "New thought"); setTimeout(() => Detail.focusTitleInput(), 30); }
+    if (id) {
+      const newId = State.addNode(id, Settings.getDefaultNodeText());
+      Detail.open(newId);
+      setTimeout(() => Detail.focusTitleInput(), 30);
+    }
     hide();
   });
 
   document.getElementById("ctx-add-sibling").addEventListener("click", () => {
     const node = State.getSelectedNode();
-    if (node && node.parentId) { State.addNode(node.parentId, "New thought"); setTimeout(() => Detail.focusTitleInput(), 30); }
+    if (node && node.parentId) {
+      const newId = State.addNode(node.parentId, Settings.getDefaultNodeText());
+      Detail.open(newId);
+      setTimeout(() => Detail.focusTitleInput(), 30);
+    }
     hide();
   });
 
@@ -209,7 +309,8 @@ const ContextMenu = (() => {
     const node = State.getSelectedNode();
     if (!node || node.id === State.getRootNodeId()) { hide(); return; }
     const hasChildren = node.childIds && node.childIds.length > 0;
-    if (!hasChildren || confirm(`Delete "${node.title}" and all its children?`)) {
+    const needsConfirm = Settings.getConfirmDelete() && hasChildren;
+    if (!needsConfirm || confirm(`Delete "${node.title}" and all its children?`)) {
       State.deleteNode(node.id);
     }
     hide();

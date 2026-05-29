@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure|reconfigure)
+        # Recreate venv on every install/upgrade to pick up new deps
+        rm -rf /opt/abrain/.venv
+        python3 -m venv /opt/abrain/.venv
+        /opt/abrain/.venv/bin/pip install --quiet --no-cache-dir \
+            -r /opt/abrain/requirements.txt
+        ;;
+esac
+
+#DEBHELPER#

@@ -6,14 +6,14 @@
  */
 
 const Detail = (() => {
-  const panel     = () => document.getElementById("detail-panel");
-  const appEl     = () => document.getElementById("app");
+  const panel     = () => document.getElementById("node-modal");
 
   // Field elements
   const titleInput   = () => document.getElementById("detail-title");
   const notesInput   = () => document.getElementById("detail-notes");
   const prioritySel  = () => document.getElementById("detail-priority");
   const dueInput     = () => document.getElementById("detail-due");
+  const colorInput   = () => document.getElementById("detail-color");
   const tagInput     = () => document.getElementById("detail-tag-input");
   const tagPills     = () => document.getElementById("detail-tags-pills");
   const attachList   = () => document.getElementById("detail-attachments-list");
@@ -25,16 +25,56 @@ const Detail = (() => {
   let _currentId = null;
   let _suppressUpdate = false; // prevent re-entrant updates while populating
 
+  // ── Recently visited ──────────────────────────────────────────────────
+  const RECENT_KEY = "abrain-recent";
+
+  function _pushRecent(id) {
+    const node = State.getNode(id);
+    if (!node || !node.title) return;
+    const maxRecent = Settings.getMaxRecentItems();
+    let recents = _loadRecents();
+    recents = recents.filter(r => !(r.id === id && r.mapId === Maps.getActiveId()));
+    recents.unshift({ id, mapId: Maps.getActiveId(), title: node.title });
+    if (recents.length > maxRecent) recents = recents.slice(0, maxRecent);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recents));
+    _renderRecents();
+  }
+
+  function _loadRecents() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); }
+    catch { return []; }
+  }
+
+  function _renderRecents() {
+    const list = document.getElementById("recent-list");
+    if (!list) return;
+    list.innerHTML = "";
+    const recents = _loadRecents();
+    if (recents.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "recent-empty";
+      empty.textContent = "No recent nodes.";
+      list.appendChild(empty);
+      return;
+    }
+    recents.forEach(r => {
+      const item = document.createElement("div");
+      item.className = "recent-item";
+      item.textContent = r.title;
+      item.title = r.title;
+      item.addEventListener("click", () => Maps.navigateTo(r.mapId, r.id));
+      list.appendChild(item);
+    });
+  }
+
   // ── Show / hide panel ────────────────────────────────────────────────
 
   function _show() {
     panel().classList.remove("hidden");
-    appEl().classList.add("detail-open");
   }
 
   function _hide() {
     panel().classList.add("hidden");
-    appEl().classList.remove("detail-open");
     _currentId = null;
   }
 
@@ -47,6 +87,20 @@ const Detail = (() => {
     notesInput().value    = node.notes   || "";
     prioritySel().value   = node.priority || "";
     dueInput().value      = node.dueDate  || "";
+    colorInput().value    = node.color   || "#89b4fa";
+
+    // Show "Inherit from parent" only when the parent has a due date
+    const inheritBtn = document.getElementById("btn-inherit-due");
+    if (inheritBtn) {
+      const parent = node.parentId ? State.getNode(node.parentId) : null;
+      const parentDue = parent && parent.dueDate;
+      inheritBtn.hidden = !parentDue;
+      if (parentDue) {
+        inheritBtn.dataset.parentDue = parentDue;
+        const fmt = new Date(parentDue + "T00:00:00").toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+        inheritBtn.title = `Use parent's due date (${fmt})`;
+      }
+    }
 
     // Status buttons
     statusBtns().forEach(btn => {
@@ -215,12 +269,27 @@ const Detail = (() => {
       removeBtn.className = "crosslink-remove";
       removeBtn.textContent = "✕";
       removeBtn.title = "Remove link";
-      removeBtn.addEventListener("click", () => {
+      removeBtn.addEventListener("click", async () => {
         const node = State.getNode(_currentId);
         if (!node) return;
         State.updateNode(_currentId, {
           crossMapLinks: node.crossMapLinks.filter((_, i) => i !== idx)
         });
+        // Remove backlink from the target map
+        try {
+          const targetData = await window.pywebview.api.load_map(link.mapId);
+          const targetNode = targetData.nodes && targetData.nodes[link.nodeId];
+          if (targetNode && targetNode.crossMapLinks) {
+            const sourceMapId  = Maps.getActiveId();
+            const sourceNodeId = _currentId;
+            targetNode.crossMapLinks = targetNode.crossMapLinks.filter(
+              l => !(l.mapId === sourceMapId && l.nodeId === sourceNodeId)
+            );
+            await window.pywebview.api.save_map(link.mapId, targetData);
+          }
+        } catch (e) {
+          console.error("Failed to remove backlink:", e);
+        }
       });
 
       row.appendChild(label);
@@ -276,23 +345,44 @@ const Detail = (() => {
 
     modal.classList.remove("hidden");
 
-    document.getElementById("btn-crosslink-confirm").onclick = () => {
+    document.getElementById("btn-crosslink-confirm").onclick = async () => {
       const targetMapId  = mapSelect.value;
       const targetNodeId = nodeSelect.value;
       if (!targetMapId || !targetNodeId) return;
 
-      const node = State.getNode(_currentId);
+      const sourceMapId  = Maps.getActiveId();
+      const sourceNodeId = _currentId;
+      const node = State.getNode(sourceNodeId);
       if (!node) return;
 
-      // Prevent duplicate links
+      // Forward link: source → target
       const exists = node.crossMapLinks.some(
         l => l.mapId === targetMapId && l.nodeId === targetNodeId
       );
       if (!exists) {
-        State.updateNode(_currentId, {
+        State.updateNode(sourceNodeId, {
           crossMapLinks: [...node.crossMapLinks, { mapId: targetMapId, nodeId: targetNodeId }]
         });
       }
+
+      // Backlink: target → source
+      try {
+        const targetData = await window.pywebview.api.load_map(targetMapId);
+        const targetNode = targetData.nodes && targetData.nodes[targetNodeId];
+        if (targetNode) {
+          const links = targetNode.crossMapLinks || [];
+          const backExists = links.some(
+            l => l.mapId === sourceMapId && l.nodeId === sourceNodeId
+          );
+          if (!backExists) {
+            targetNode.crossMapLinks = [...links, { mapId: sourceMapId, nodeId: sourceNodeId }];
+            await window.pywebview.api.save_map(targetMapId, targetData);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to create backlink:", e);
+      }
+
       modal.classList.add("hidden");
     };
   }
@@ -316,7 +406,8 @@ const Detail = (() => {
       const node = State.getNode(_currentId);
       if (!node || node.id === State.getRootNodeId()) return;
       const hasChildren = node.childIds && node.childIds.length > 0;
-      if (!hasChildren || confirm(`Delete "${node.title}" and all its children?`)) {
+      const needsConfirm = Settings.getConfirmDelete() && hasChildren;
+      if (!needsConfirm || confirm(`Delete "${node.title}" and all its children?`)) {
         State.deleteNode(node.id);
       }
     });
@@ -345,6 +436,25 @@ const Detail = (() => {
       State.updateNode(_currentId, { dueDate: dueInput().value || null });
     });
 
+    colorInput().addEventListener("input", () => {
+      if (_suppressUpdate || !_currentId) return;
+      State.updateNode(_currentId, { color: colorInput().value });
+    });
+
+    document.getElementById("btn-clear-color").addEventListener("click", () => {
+      if (!_currentId) return;
+      colorInput().value = "#89b4fa";
+      State.updateNode(_currentId, { color: null });
+    });
+
+    document.getElementById("btn-inherit-due").addEventListener("click", () => {
+      if (!_currentId) return;
+      const parentDue = document.getElementById("btn-inherit-due").dataset.parentDue;
+      if (!parentDue) return;
+      dueInput().value = parentDue;
+      State.updateNode(_currentId, { dueDate: parentDue });
+    });
+
     // Status buttons
     statusBtns().forEach(btn => {
       btn.addEventListener("click", () => {
@@ -358,6 +468,10 @@ const Detail = (() => {
     document.getElementById("btn-close-detail").addEventListener("click", () => {
       State.deselectNode();
     });
+
+    document.getElementById("btn-done-node").addEventListener("click", () => {
+      State.deselectNode();
+    });
   }
 
   // ── State subscriber ──────────────────────────────────────────────────
@@ -365,24 +479,31 @@ const Detail = (() => {
   function _onStateChange() {
     const selectedId = State.getSelectedId();
 
+    // Auto-close if nothing is selected
     if (!selectedId) {
       _hide();
       return;
     }
 
-    const node = State.getNode(selectedId);
-    if (!node) { _hide(); return; }
-
-    _show();
-
-    if (selectedId !== _currentId) {
+    // If the modal is already open, keep it in sync with the current node
+    if (!panel().classList.contains("hidden")) {
+      const node = State.getNode(selectedId);
+      if (!node) { _hide(); return; }
       _currentId = selectedId;
+      _populate(node);
     }
-
-    _populate(node);
   }
 
   // ── Public ────────────────────────────────────────────────────────────
+
+  function open(id) {
+    const node = State.getNode(id);
+    if (!node) return;
+    _currentId = id;
+    _populate(node);
+    _show();
+    _pushRecent(id);
+  }
 
   function focusTitleInput() {
     if (!panel().classList.contains("hidden")) {
@@ -397,7 +518,14 @@ const Detail = (() => {
     _setupAttachmentButtons();
     _setupCrossLinkModal();
     _setupDeleteButton();
+
+    // Close modal when clicking the backdrop (outside the card)
+    panel().addEventListener("click", e => {
+      if (e.target === panel()) State.deselectNode();
+    });
+
     State.subscribe(_onStateChange);
+    _renderRecents();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
@@ -410,7 +538,7 @@ const Detail = (() => {
       .replace(/"/g, "&quot;");
   }
 
-  return { init, focusTitleInput, openCrossLinkModal };
+  return { init, open, focusTitleInput, openCrossLinkModal, renderRecentList: _renderRecents };
 })();
 
 document.addEventListener("DOMContentLoaded", () => Detail.init());
