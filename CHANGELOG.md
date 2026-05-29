@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.1] - 2026-05-29
+
+### Fixed
+- Todo "Add a task…" input was too narrow — recurrence select now has a fixed compact width so the text field fills the remaining space
+
 ## [1.1.0] - 2026-05-29
 
 ### Added

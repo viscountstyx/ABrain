@@ -509,12 +509,15 @@ select { width: 100%; }
   gap: 4px;
 }
 .todo-add-row input {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   font-size: 12px;
   padding: 4px 8px;
   background: var(--bg-overlay);
 }
 .todo-add-row select {
+  flex: 0 0 auto;
+  width: 70px;
   font-size: 11px;
   background: var(--bg-overlay);
   border: 1px solid var(--border);
