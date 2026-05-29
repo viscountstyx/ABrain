@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.3] - 2026-05-29
+
+### Fixed
+- Resolved tasks with a due date no longer appear in the agenda
+
 ## [1.0.2] - 2026-05-29
 
 ### Added

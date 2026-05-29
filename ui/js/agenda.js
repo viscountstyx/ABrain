@@ -118,7 +118,8 @@ const Agenda = (() => {
 
       Object.values(nodes).forEach(node => {
         if (node.id === rootId) return;
-        const hasStatus = node.status && node.status !== "resolved";
+        if (node.status === "resolved") return;
+        const hasStatus = !!node.status;
         const hasDue    = !!node.dueDate;
         if (!hasStatus && !hasDue) return;
 
