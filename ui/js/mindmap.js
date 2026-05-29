@@ -159,14 +159,14 @@ const MindMap = (() => {
     const root = d3.hierarchy(hierarchyData);
     const nodeCount = root.descendants().length;
 
-    // Scale radius by tree density — tighter base, slower growth
-    const baseRadius = Math.min(_width, _height) * 0.28;
-    const radius = nodeCount > 20 ? baseRadius * (1 + (nodeCount - 20) * 0.007) : baseRadius;
+    // Scale radius by tree density — wider base, faster growth to reduce label overlap
+    const baseRadius = Math.min(_width, _height) * 0.30;
+    const radius = nodeCount > 20 ? baseRadius * (1 + (nodeCount - 20) * 0.012) : baseRadius;
 
-    // Radial tree layout — tighter separation
+    // Radial tree layout — generous separation to reduce label overlap
     const treeLayout = d3.tree()
       .size([2 * Math.PI, radius])
-      .separation((a, b) => (a.parent === b.parent ? 0.7 : 1.1) / a.depth);
+      .separation((a, b) => (a.parent === b.parent ? 1.0 : 1.5) / a.depth);
 
     treeLayout(root);
 
@@ -218,7 +218,11 @@ const MindMap = (() => {
 
     // Labels
     nodeG.append("text")
-      .attr("class", d => "node-label" + (_dimmedIds.has(d.data.id) ? " dimmed" : ""))
+      .attr("class", d => {
+        const dimmed   = _dimmedIds.has(d.data.id) ? " dimmed" : "";
+        const selected = d.data.id === selectedId ? " selected" : "";
+        return "node-label" + dimmed + selected;
+      })
       .attr("text-anchor", d => {
         if (d.depth === 0) return "middle";
         return d.x_cart > 0 ? "start" : "end";

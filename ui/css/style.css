@@ -359,10 +359,14 @@ select { width: 100%; }
 .node-label {
   font-size: 0.857rem;
   fill: var(--text-primary);
-  pointer-events: none;
+  pointer-events: auto;
   dominant-baseline: central;
+  opacity: 0.45;
+  transition: opacity 0.15s;
 }
-.node-label.dimmed { opacity: 0.18; }
+.node-label.dimmed   { opacity: 0.1; }
+.node-label.selected { opacity: 1; }
+.node-group:hover .node-label { opacity: 1; }
 
 .collapse-badge {
   font-size: 9px;

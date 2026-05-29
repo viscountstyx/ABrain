@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.4] - 2026-05-29
+
+### Changed
+- Map node labels are dimmed to 45% opacity by default; hovering a node or its label restores full brightness, and the currently selected node's label is always fully visible
+- Map layout uses wider base radius and more generous angular separation between nodes, reducing label overlap on busy trees
+
 ## [1.1.3] - 2026-05-29
 
 ### Fixed
