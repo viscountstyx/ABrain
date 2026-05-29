@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.2] - 2026-05-29
+
+### Added
+- Jira "＋ map" button now opens a searchable parent-node picker instead of silently attaching to the selected or root node
+- "Move to…" option in the right-click context menu to reparent any existing node via the same node picker (node and its descendants are excluded to prevent cycles)
+- Node picker modal: indented tree view of all map nodes, live search filter, keyboard-friendly confirm/cancel
+
+### Changed
+- Mind map node circles now show a priority ring (high = red, medium = amber, low = blue stroke) so priority is visible without opening the detail panel
+- Agenda panel priority badges are now coloured spans rather than plain text, matching the node priority colour scheme
+- Settings save now immediately re-renders the mind map so visual changes take effect without a manual refresh
+- Hard-coded `12px` font sizes converted to `0.857rem` so the UI respects system font-size preferences
+
 ## [1.0.1] - 2026-05-29
 
 ### Added

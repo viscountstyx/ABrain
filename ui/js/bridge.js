@@ -266,6 +266,84 @@ const Bridge = (() => {
 
 // ── Context menu singleton (used across modules) ──────────────────────
 
+const NodePicker = (() => {
+  const backdrop   = document.getElementById("node-picker-modal");
+  const titleEl    = document.getElementById("node-picker-title");
+  const searchEl   = document.getElementById("node-picker-search");
+  const listEl     = document.getElementById("node-picker-list");
+  const confirmBtn = document.getElementById("btn-node-picker-confirm");
+
+  let _resolve    = null;
+  let _selectedId = null;
+  let _allItems   = [];
+
+  function _flattenNodes(excludeIds) {
+    const rootId = State.getRootNodeId();
+    if (!rootId) return [];
+    const nodes = State.getAllNodes();
+    const items = [];
+    function walk(id, depth) {
+      if (excludeIds.has(id)) return;
+      const n = nodes[id];
+      if (!n) return;
+      items.push({ id: n.id, title: n.title, depth });
+      (n.childIds || []).forEach(cid => walk(cid, depth + 1));
+    }
+    walk(rootId, 0);
+    return items;
+  }
+
+  function _render(filter) {
+    listEl.innerHTML = "";
+    const q = (filter || "").toLowerCase();
+    _allItems
+      .filter(item => !q || item.title.toLowerCase().includes(q))
+      .forEach(item => {
+        const li = document.createElement("li");
+        li.className = "node-picker-item" + (item.id === _selectedId ? " selected" : "");
+        li.style.paddingLeft = (10 + item.depth * 14) + "px";
+        li.textContent = item.title || "(untitled)";
+        li.dataset.id = item.id;
+        li.addEventListener("click", () => {
+          _selectedId = item.id;
+          listEl.querySelectorAll(".node-picker-item").forEach(l => l.classList.remove("selected"));
+          li.classList.add("selected");
+          confirmBtn.disabled = false;
+        });
+        listEl.appendChild(li);
+      });
+  }
+
+  function pick(title, excludeIds = new Set()) {
+    titleEl.textContent = title || "Choose Parent Node";
+    _selectedId = null;
+    confirmBtn.disabled = true;
+    searchEl.value = "";
+    _allItems = _flattenNodes(excludeIds);
+    _render();
+    backdrop.classList.remove("hidden");
+    setTimeout(() => searchEl.focus(), 50);
+    return new Promise(resolve => { _resolve = resolve; });
+  }
+
+  function _confirm() {
+    backdrop.classList.add("hidden");
+    if (_resolve) { _resolve(_selectedId); _resolve = null; }
+  }
+
+  function _cancel() {
+    backdrop.classList.add("hidden");
+    if (_resolve) { _resolve(null); _resolve = null; }
+  }
+
+  searchEl.addEventListener("input", () => _render(searchEl.value));
+  confirmBtn.addEventListener("click", _confirm);
+  backdrop.querySelectorAll(".modal-close").forEach(btn => btn.addEventListener("click", _cancel));
+  backdrop.addEventListener("click", e => { if (e.target === backdrop) _cancel(); });
+
+  return { pick };
+})();
+
 const ContextMenu = (() => {
   const el = document.getElementById("context-menu");
 
@@ -320,6 +398,21 @@ const ContextMenu = (() => {
   document.getElementById("ctx-add-crosslink").addEventListener("click", () => {
     hide();
     Detail.openCrossLinkModal(State.getSelectedId());
+  });
+
+  document.getElementById("ctx-move-to").addEventListener("click", async () => {
+    const node = State.getSelectedNode();
+    hide();
+    if (!node || node.id === State.getRootNodeId()) return;
+    const excludeIds = new Set([node.id]);
+    function collectDescendants(id) {
+      const n = State.getNode(id);
+      if (!n) return;
+      (n.childIds || []).forEach(cid => { excludeIds.add(cid); collectDescendants(cid); });
+    }
+    collectDescendants(node.id);
+    const newParentId = await NodePicker.pick("Move to…", excludeIds);
+    if (newParentId) State.moveNode(node.id, newParentId);
   });
 
   // Dismiss on click outside

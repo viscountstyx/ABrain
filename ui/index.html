@@ -484,9 +484,28 @@
       <li id="ctx-add-sibling">Add Sibling</li>
       <li class="ctx-sep"></li>
       <li id="ctx-add-crosslink">Link to Another Map…</li>
+      <li id="ctx-move-to">Move to…</li>
       <li class="ctx-sep"></li>
       <li id="ctx-delete" class="ctx-danger">Delete</li>
     </ul>
+  </div>
+
+  <!-- NODE PICKER MODAL -->
+  <div id="node-picker-modal" class="modal-backdrop hidden">
+    <div class="modal modal--node-picker">
+      <div class="modal-header">
+        <span id="node-picker-title">Choose Parent Node</span>
+        <button class="icon-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <input id="node-picker-search" type="search" placeholder="Search nodes…" autocomplete="off" />
+        <ul id="node-picker-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-node-picker-confirm" disabled>Select</button>
+        <button class="modal-close">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- CROSS-MAP LINK MODAL -->

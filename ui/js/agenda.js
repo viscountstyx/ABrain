@@ -316,10 +316,18 @@ const Agenda = (() => {
 
       const meta = document.createElement("div");
       meta.className = "agenda-item-meta";
-      const parts = [];
-      if (item.status)   parts.push(item.status);
-      if (item.priority) parts.push(item.priority);
-      meta.textContent = parts.join(" · ");
+      if (item.status) {
+        const s = document.createElement("span");
+        s.textContent = item.status;
+        meta.appendChild(s);
+      }
+      if (item.priority) {
+        if (item.status) meta.appendChild(document.createTextNode(" · "));
+        const badge = document.createElement("span");
+        badge.className = `agenda-priority-badge agenda-priority-badge--${item.priority}`;
+        badge.textContent = item.priority;
+        meta.appendChild(badge);
+      }
 
       body.appendChild(title);
       body.appendChild(path);

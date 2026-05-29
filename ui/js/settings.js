@@ -331,6 +331,7 @@ const Settings = (() => {
     await window.pywebview.api.save_config(updated);
     _config = updated;
     applyUiSettings(ui);
+    if (typeof MindMap !== "undefined") MindMap.render();
     close();
   }
 

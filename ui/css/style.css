@@ -334,6 +334,11 @@ select { width: 100%; }
 .node-circle.selected { stroke-width: 3; filter: drop-shadow(0 0 6px currentColor); }
 .node-circle.dimmed   { opacity: 0.18; }
 
+/* Priority ring — overrides status stroke; placed after status rules so it wins */
+.node-circle.priority-high   { stroke: var(--priority-high);   stroke-width: 3; }
+.node-circle.priority-medium { stroke: var(--priority-medium); stroke-width: 2.5; }
+.node-circle.priority-low    { stroke: var(--priority-low); }
+
 /* Ghost nodes (cross-map links) */
 .ghost-circle {
   fill: transparent;
@@ -351,7 +356,7 @@ select { width: 100%; }
 
 /* Node labels */
 .node-label {
-  font-size: 12px;
+  font-size: 0.857rem;
   fill: var(--text-primary);
   pointer-events: none;
   dominant-baseline: central;
@@ -554,7 +559,7 @@ select { width: 100%; }
 
 .todo-title {
   flex: 1;
-  font-size: 12px;
+  font-size: 0.857rem;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -605,7 +610,7 @@ select { width: 100%; }
   flex-shrink: 0;
 }
 .jira-summary {
-  font-size: 12px;
+  font-size: 0.857rem;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -658,7 +663,7 @@ select { width: 100%; }
 }
 .cal-info { flex: 1; overflow: hidden; }
 .cal-title {
-  font-size: 12px;
+  font-size: 0.857rem;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -981,6 +986,47 @@ select { width: 100%; }
 .modal-footer .danger-btn { width: auto; }
 
 /* ═══════════════════════════════════════
+   Node picker modal
+═══════════════════════════════════════ */
+.modal--node-picker {
+  min-width: 340px;
+  max-width: 420px;
+}
+#node-picker-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  background: var(--bg-input, var(--bg-hover));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+#node-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.node-picker-item {
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+.node-picker-item:hover { background: var(--bg-hover); }
+.node-picker-item.selected {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════
    Jira "Add to map" button
 ═══════════════════════════════════════ */
 .jira-add-map-btn {
@@ -1018,7 +1064,7 @@ select { width: 100%; }
 
 .agenda-group-header {
   padding: 8px 10px 4px;
-  font-size: 10px;
+  font-size: 0.714rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1063,7 +1109,7 @@ select { width: 100%; }
 }
 
 .agenda-item-title {
-  font-size: 13px;
+  font-size: 0.929rem;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1074,7 +1120,7 @@ select { width: 100%; }
 .agenda-item-title.done { text-decoration: line-through; opacity: 0.45; }
 
 .agenda-item-path {
-  font-size: 10px;
+  font-size: 0.714rem;
   color: var(--text-muted);
   opacity: 0.7;
   overflow: hidden;
@@ -1084,7 +1130,7 @@ select { width: 100%; }
 }
 
 .agenda-item-meta {
-  font-size: 11px;
+  font-size: 0.786rem;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1158,6 +1204,21 @@ select { width: 100%; }
 .agenda-item.overdue { border-left-color: var(--node-blocked) !important; }
 .agenda-item.overdue .agenda-item-title { color: var(--node-blocked); }
 .agenda-item.overdue .agenda-dot { background: var(--node-blocked) !important; }
+
+/* Priority badge in agenda meta line */
+.agenda-priority-badge {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 0.714rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+.agenda-priority-badge--high   { background: rgba(243,139,168,0.18); color: var(--priority-high); }
+.agenda-priority-badge--medium { background: rgba(250,179,135,0.18); color: var(--priority-medium); }
+.agenda-priority-badge--low    { background: rgba(166,227,161,0.18); color: var(--priority-low); }
 
 .agenda-snooze { display: none; flex-direction: column; gap: 2px; margin-left: 4px; flex-shrink: 0; }
 .agenda-item--node:hover .agenda-snooze { display: flex; }

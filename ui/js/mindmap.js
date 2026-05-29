@@ -204,10 +204,11 @@ const MindMap = (() => {
     // Node circles
     nodeG.append("circle")
       .attr("class", d => {
-        const statusClass = "status-" + (d.data.status || "none");
-        const selected    = d.data.id === selectedId ? " selected" : "";
-        const dimmed      = _dimmedIds.has(d.data.id) ? " dimmed" : "";
-        return `node-circle ${statusClass}${selected}${dimmed}`;
+        const statusClass   = "status-" + (d.data.status || "none");
+        const priorityClass = d.data.priority ? ` priority-${d.data.priority}` : "";
+        const selected      = d.data.id === selectedId ? " selected" : "";
+        const dimmed        = _dimmedIds.has(d.data.id) ? " dimmed" : "";
+        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}`;
       })
       .attr("r", d => d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2))
       .style("fill", d => d.data.color || null)

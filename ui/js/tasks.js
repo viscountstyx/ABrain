@@ -279,9 +279,10 @@ const Tasks = (() => {
       addBtn.className = "jira-add-map-btn";
       addBtn.textContent = "＋ map";
       addBtn.title = "Add as node in current map";
-      addBtn.addEventListener("click", e => {
+      addBtn.addEventListener("click", async e => {
         e.stopPropagation();
-        const parentId = State.getSelectedId() || State.getRootNodeId();
+        if (!State.getRootNodeId()) return;
+        const parentId = await NodePicker.pick("Add to Map — Choose Parent");
         if (!parentId) return;
         const nodeTitle = issue.key + ": " + issue.summary.substring(0, 60);
         const newId = State.addNode(parentId, nodeTitle);
