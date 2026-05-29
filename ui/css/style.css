@@ -1049,6 +1049,41 @@ select { width: 100%; }
 }
 
 /* ═══════════════════════════════════════
+   Jira search modal
+═══════════════════════════════════════ */
+.modal--jira-search {
+  min-width: 380px;
+  max-width: 520px;
+  width: 90vw;
+}
+#jira-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  background: var(--bg-input, var(--bg-hover));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.jira-search-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+  min-height: 16px;
+}
+.jira-search-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+/* In the search modal the add button is always visible (not hover-gated) */
+.jira-search-item .jira-add-map-btn { display: block; }
+
+/* ═══════════════════════════════════════
    Jira "Add to map" button
 ═══════════════════════════════════════ */
 .jira-add-map-btn {

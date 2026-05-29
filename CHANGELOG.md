@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-05-29
+
+### Added
+- Jira issue search — right-click any node and choose "Add Jira Issue…" to open a search modal; type a ticket key (e.g. `KEY-001`) for an instant single-issue lookup, or type any text to run a full-text search across all issues (not just those assigned to you); clicking a result adds it as a child node with a Jira link attachment and "started" status
+
 ## [1.1.4] - 2026-05-29
 
 ### Changed

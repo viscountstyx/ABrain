@@ -461,6 +461,69 @@ class Api:
             })
         return {"issues": issues}
 
+    def search_jira_issues(self, query: str) -> dict:
+        cfg = self.load_config().get("jira", {})
+        url = cfg.get("url", "").rstrip("/")
+        username = cfg.get("username", "")
+        token = cfg.get("token", "")
+        if not (url and username and token):
+            return {"issues": [], "error": "Jira not configured"}
+
+        query = (query or "").strip()
+        if not query:
+            return {"issues": []}
+
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+        fields = "summary,status,priority,issuetype"
+
+        import re as _re
+        if _re.match(r'^[A-Z]+-\d+$', query):
+            # Direct key lookup
+            api_url = f"{url}/rest/api/2/issue/{query}?fields={fields}"
+            req = urllib.request.Request(api_url, headers=headers)
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    item = json.loads(resp.read().decode())
+                f = item.get("fields", {})
+                return {"issues": [{
+                    "key":       item["key"],
+                    "summary":   f.get("summary", ""),
+                    "status":    f.get("status", {}).get("name", ""),
+                    "priority":  f.get("priority", {}).get("name", "") if f.get("priority") else "",
+                    "issueType": f.get("issuetype", {}).get("name", "") if f.get("issuetype") else "",
+                    "url":       f"{url}/browse/{item['key']}",
+                }]}
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return {"issues": [], "error": f"{query} not found"}
+                return {"issues": [], "error": f"HTTP {e.code}"}
+            except urllib.error.URLError as e:
+                return {"issues": [], "error": str(e)}
+
+        # Text search — not restricted to current user
+        safe = query.replace('"', '\\"')
+        jql = f'text ~ "{safe}" ORDER BY updated DESC'
+        api_url = f"{url}/rest/api/2/search?jql={urllib.request.quote(jql)}&fields={fields}&maxResults=20"
+        req = urllib.request.Request(api_url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+        except urllib.error.URLError as e:
+            return {"issues": [], "error": str(e)}
+
+        issues = []
+        for item in data.get("issues", []):
+            f = item.get("fields", {})
+            issues.append({
+                "key":       item["key"],
+                "summary":   f.get("summary", ""),
+                "status":    f.get("status", {}).get("name", ""),
+                "priority":  f.get("priority", {}).get("name", "") if f.get("priority") else "",
+                "issueType": f.get("issuetype", {}).get("name", "") if f.get("issuetype") else "",
+                "url":       f"{url}/browse/{item['key']}",
+            })
+        return {"issues": issues}
+
     # ------------------------------------------------------------------
     # Calendar
     # ------------------------------------------------------------------

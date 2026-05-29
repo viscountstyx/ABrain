@@ -402,6 +402,12 @@ const ContextMenu = (() => {
     hide();
   });
 
+  document.getElementById("ctx-add-jira").addEventListener("click", () => {
+    const id = State.getSelectedId();
+    hide();
+    JiraSearch.open(id);
+  });
+
   document.getElementById("ctx-add-crosslink").addEventListener("click", () => {
     hide();
     Detail.openCrossLinkModal(State.getSelectedId());
