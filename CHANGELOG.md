@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.3] - 2026-05-29
+
+### Fixed
+- Agenda no longer shows a duplicate date group (e.g. "FRI, 29 MAY") alongside "Today" for items due today — caused by a UTC/local timezone mismatch when comparing dates
+
 ## [1.1.2] - 2026-05-29
 
 ### Fixed
