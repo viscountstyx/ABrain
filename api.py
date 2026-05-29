@@ -345,7 +345,11 @@ class Api:
 
     def load_config(self) -> dict:
         if not os.path.exists(self._config_path):
-            return {"jira": {"url": "", "username": "", "token": ""}, "calendar": {"icsUrl": "", "email": ""}}
+            return {
+                "firstRun": True,
+                "jira": {"url": "", "username": "", "token": ""},
+                "calendar": {"icsUrl": "", "email": ""},
+            }
         with open(self._config_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
@@ -364,6 +368,53 @@ class Api:
                 pass
             raise
         return {"ok": True}
+
+    # ------------------------------------------------------------------
+    # Connection tests (used by onboarding wizard)
+    # ------------------------------------------------------------------
+
+    def test_jira_connection(self, url: str, username: str, token: str) -> dict:
+        url = url.rstrip("/")
+        if not (url and username and token):
+            return {"ok": False, "error": "All fields are required"}
+        jql = "assignee = currentUser() AND resolution = Unresolved ORDER BY priority ASC, created DESC"
+        api_url = f"{url}/rest/api/2/search?jql={urllib.request.quote(jql)}&fields=summary&maxResults=1"
+        req = urllib.request.Request(api_url, headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+            count = data.get("total", 0)
+            label = "issue" if count == 1 else "issues"
+            return {"ok": True, "message": f"Connected. {count} open {label} assigned to you."}
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                return {"ok": False, "error": "Authentication failed. Check your username and token."}
+            if e.code == 403:
+                return {"ok": False, "error": "Access denied. Check your token permissions."}
+            return {"ok": False, "error": f"HTTP {e.code}: {e.reason}"}
+        except urllib.error.URLError as e:
+            return {"ok": False, "error": f"Connection failed: {e.reason}"}
+
+    def test_calendar_connection(self, ics_url: str) -> dict:
+        if not ics_url:
+            return {"ok": False, "error": "ICS URL is required"}
+        if not _ICAL_AVAILABLE:
+            return {"ok": False, "error": "icalendar library not installed"}
+        try:
+            req = urllib.request.Request(ics_url, headers={"User-Agent": "ABrain/1.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = resp.read()
+            cal = ICalendar.from_ical(raw)
+            count = sum(1 for c in cal.walk() if c.name == "VEVENT")
+            label = "event" if count == 1 else "events"
+            return {"ok": True, "message": f"Calendar loaded. {count} {label} found."}
+        except urllib.error.URLError as e:
+            return {"ok": False, "error": f"Connection failed: {e.reason}"}
+        except Exception as e:
+            return {"ok": False, "error": f"Failed to parse calendar: {e}"}
 
     # ------------------------------------------------------------------
     # Jira

@@ -67,6 +67,7 @@ const Bridge = (() => {
     try {
       const cfg = await window.pywebview.api.load_config();
       Settings.applyUiSettings(cfg.ui || {});
+      if (cfg.firstRun) Onboarding.show();
     } catch (_) { /* non-fatal — use defaults */ }
 
     // Register auto-save on every state change

@@ -45,12 +45,13 @@ Package: abrain
 Version: ${VERSION}
 Architecture: ${ARCH}
 Maintainer: Andrew Faulkner <andrew.faulkner@fasthosts.com>
-Depends: python3, python3-venv, python3-pip, libgl1
+Depends: python3 (>= 3.9), python3-venv, python3-pip, libgl1, libegl1, libxkbcommon0, libdbus-1-3
 Section: utils
 Priority: optional
 Description: Mind map and brain-dump tool
  ABrain is an interactive mind-mapping and note-taking application
  built on PyWebView and Qt6, with KDE Plasma integration.
+ Requires Ubuntu 22.04 / Debian 11 or newer.
 EOF
 
 cat > "$STAGE/DEBIAN/postinst" <<'EOF'
@@ -58,6 +59,13 @@ cat > "$STAGE/DEBIAN/postinst" <<'EOF'
 set -e
 case "$1" in
     configure|reconfigure)
+        # Verify Python version before attempting pip install (PySide6 needs 3.9+)
+        PY_VER=$(python3 -c 'import sys; print(sys.version_info >= (3, 9))')
+        if [ "$PY_VER" != "True" ]; then
+            echo "ERROR: ABrain requires Python 3.9 or newer." >&2
+            echo "       Your system Python is: $(python3 --version 2>&1)" >&2
+            exit 1
+        fi
         echo "ABrain: setting up Python environment (this may take a minute)…"
         rm -rf /opt/abrain/.venv
         python3 -m venv /opt/abrain/.venv
