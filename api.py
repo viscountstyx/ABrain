@@ -284,15 +284,18 @@ class Api:
             return json.load(f)
 
     def add_task(self, title: str, recurrence: str = "none") -> dict:
+        from datetime import date
         title = title.strip()
         if not title:
             return {"error": "Title is required"}
         data = self.load_tasks()
+        rec = recurrence if recurrence in ("daily", "weekly", "monthly") else "none"
         task = {
             "id": str(uuid.uuid4()),
             "title": title,
             "done": False,
-            "recurrence": recurrence if recurrence in ("daily", "weekly", "monthly") else "none",
+            "recurrence": rec,
+            "dueDate": date.today().isoformat() if rec != "none" else None,
             "createdAt": _now(),
         }
         data["tasks"].append(task)
@@ -308,22 +311,25 @@ class Api:
         return {"ok": True}
 
     def toggle_task(self, task_id: str) -> dict:
+        from datetime import date, timedelta as td
         data = self.load_tasks()
         new_task = None
         for task in data["tasks"]:
             if task["id"] == task_id:
                 task["done"] = not task["done"]
-                # If marking done and task recurs, spawn next occurrence
+                # Spawn the next occurrence when marking done
                 if task["done"] and task.get("recurrence", "none") != "none":
-                    from datetime import date, timedelta as td
                     delta = {"daily": td(days=1), "weekly": td(weeks=1), "monthly": td(days=30)}
                     d = delta.get(task["recurrence"])
                     if d:
+                        base = date.fromisoformat(task["dueDate"]) if task.get("dueDate") else date.today()
+                        next_due = base + d
                         new_task = {
                             "id": str(uuid.uuid4()),
                             "title": task["title"],
                             "done": False,
                             "recurrence": task["recurrence"],
+                            "dueDate": next_due.isoformat(),
                             "createdAt": _now(),
                         }
                 break

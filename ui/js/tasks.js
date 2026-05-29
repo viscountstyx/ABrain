@@ -72,7 +72,13 @@ const Tasks = (() => {
 
   function _orderedTodos() {
     const map = Object.fromEntries(_todos.map(t => [t.id, t]));
-    return _order.map(id => map[id]).filter(Boolean);
+    const today = new Date().toISOString().slice(0, 10);
+    return _order.map(id => map[id]).filter(t => {
+      if (!t) return false;
+      // Hide future recurring occurrences until their due date arrives
+      if (t.dueDate && t.dueDate > today) return false;
+      return true;
+    });
   }
 
   function _renderTodos() {
@@ -475,7 +481,10 @@ const Tasks = (() => {
   }
 
   function getTodosWithOrder() {
-    return { todos: _todos, order: _order };
+    const today = new Date().toISOString().slice(0, 10);
+    const visible = _todos.filter(t => !t.dueDate || t.dueDate <= today);
+    const visibleIds = new Set(visible.map(t => t.id));
+    return { todos: visible, order: _order.filter(id => visibleIds.has(id)) };
   }
 
   function getCalEvents() {

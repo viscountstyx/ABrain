@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.2] - 2026-05-29
+
+### Fixed
+- Recurring todos no longer spawn a checkable duplicate immediately — the next occurrence is hidden until its due date arrives (tomorrow for daily, next week for weekly, etc.)
+- Recurring todos now appear in the agenda under their due date (Today, Tomorrow, etc.) instead of being absent
+
 ## [1.1.1] - 2026-05-29
 
 ### Fixed

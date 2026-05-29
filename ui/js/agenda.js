@@ -145,12 +145,14 @@ const Agenda = (() => {
     order.forEach((id, idx) => {
       const todo = todoMap[id];
       if (!todo) return;
+      const sd = todo.dueDate ? new Date(todo.dueDate + "T00:00:00") : null;
       items.push({
         type:      "todo",
         id:        "todo:" + todo.id,
         todoId:    todo.id,
         title:     todo.title,
-        sortDate:  null,
+        sortDate:  sd,
+        overdue:   _isOverdue(sd),
         done:      todo.done,
         recurrence: todo.recurrence && todo.recurrence !== "none" ? todo.recurrence : null,
         priority:  null,
