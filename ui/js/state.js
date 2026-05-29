@@ -213,6 +213,38 @@ const State = (() => {
     _notify();
   }
 
+  function duplicateNode(id) {
+    const src = _nodes[id];
+    if (!src || id === _rootNodeId) return null;
+    const newId = _uuid();
+    const now = _now();
+    _nodes[newId] = {
+      id:            newId,
+      title:         src.title,
+      parentId:      src.parentId,
+      childIds:      [],
+      status:        src.status,
+      priority:      src.priority,
+      color:         src.color || null,
+      notes:         src.notes || "",
+      tags:          [...(src.tags || [])],
+      dueDate:       src.dueDate || null,
+      attachments:   JSON.parse(JSON.stringify(src.attachments || [])),
+      crossMapLinks: [],
+      createdAt:     now,
+      updatedAt:     now,
+    };
+    if (src.parentId && _nodes[src.parentId]) {
+      const siblings = _nodes[src.parentId].childIds;
+      const idx = siblings.indexOf(id);
+      siblings.splice(idx + 1, 0, newId);
+      _nodes[src.parentId].updatedAt = now;
+    }
+    _selectedNodeId = newId;
+    _notify();
+    return newId;
+  }
+
   function selectNode(id) {
     _selectedNodeId = id;
     _notify();
@@ -247,6 +279,7 @@ const State = (() => {
     getAllTags,
     // Mutations
     addNode,
+    duplicateNode,
     updateNode,
     deleteNode,
     moveNode,

@@ -61,6 +61,7 @@
           <div class="tasks-sub-header" data-key="jira">
             <span class="tasks-sub-title">Jira</span>
             <span class="tasks-sub-count" id="jira-count"></span>
+            <span class="sync-status" id="jira-sync-status"></span>
             <span class="tasks-sub-arrow">▾</span>
           </div>
           <div class="tasks-sub-body" id="jira-body">
@@ -74,6 +75,7 @@
           <div class="tasks-sub-header" data-key="cal">
             <span class="tasks-sub-title">Calendar</span>
             <span class="tasks-sub-count" id="cal-count"></span>
+            <span class="sync-status" id="cal-sync-status"></span>
             <span class="tasks-sub-arrow">▾</span>
           </div>
           <div class="tasks-sub-body" id="cal-body">
@@ -388,7 +390,7 @@
           </div>
 
           <div class="settings-section">
-            <div class="settings-section-title">Cross-map Links</div>
+            <div class="settings-section-title">Cross-map Links <span id="settings-broken-count" class="settings-broken-count"></span></div>
             <p class="settings-description">Find and remove links pointing to maps or nodes that no longer exist.</p>
             <div class="settings-action-row">
               <button id="btn-scan-broken-links" class="settings-btn">Scan for broken links</button>
@@ -465,6 +467,17 @@
                 <input id="settings-int-cal-url" type="url" placeholder="https://calendar.google.com/…/basic.ics" />
               </div>
             </div>
+            <div class="settings-row">
+              <label class="settings-label" for="settings-int-cal-days">Lookahead</label>
+              <div class="settings-control">
+                <select id="settings-int-cal-days">
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="60">60 days</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -485,6 +498,7 @@
       <li class="ctx-sep"></li>
       <li id="ctx-add-crosslink">Link to Another Map…</li>
       <li id="ctx-move-to">Move to…</li>
+      <li id="ctx-duplicate">Duplicate</li>
       <li class="ctx-sep"></li>
       <li id="ctx-delete" class="ctx-danger">Delete</li>
     </ul>
@@ -542,6 +556,43 @@
       <div class="modal-footer">
         <button id="btn-new-map-confirm">Create</button>
         <button class="modal-close">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEYBOARD SHORTCUTS MODAL -->
+  <div id="shortcuts-modal" class="modal-backdrop hidden">
+    <div class="modal modal--shortcuts">
+      <div class="modal-header">
+        <h2>Keyboard Shortcuts</h2>
+        <button class="icon-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body shortcuts-body">
+        <div class="shortcuts-section">
+          <h3>Navigation</h3>
+          <table class="shortcuts-table">
+            <tr><td><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td><td>Navigate the tree</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Open detail panel for selected node</td></tr>
+            <tr><td><kbd>Escape</kbd></td><td>Deselect node / close menu</td></tr>
+          </table>
+        </div>
+        <div class="shortcuts-section">
+          <h3>Editing</h3>
+          <table class="shortcuts-table">
+            <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>Add child to selected node</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>Add child to selected node</td></tr>
+            <tr><td><kbd>Delete</kbd></td><td>Delete selected node</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>click</kbd></td><td>Collapse / expand node</td></tr>
+          </table>
+        </div>
+        <div class="shortcuts-section">
+          <h3>App</h3>
+          <table class="shortcuts-table">
+            <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Force save</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Focus search</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+          </table>
+        </div>
       </div>
     </div>
   </div>

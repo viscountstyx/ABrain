@@ -146,14 +146,15 @@ const Agenda = (() => {
       const todo = todoMap[id];
       if (!todo) return;
       items.push({
-        type:     "todo",
-        id:       "todo:" + todo.id,
-        todoId:   todo.id,
-        title:    todo.title,
-        sortDate: null,
-        done:     todo.done,
-        priority: null,
-        orderIdx: idx,
+        type:      "todo",
+        id:        "todo:" + todo.id,
+        todoId:    todo.id,
+        title:     todo.title,
+        sortDate:  null,
+        done:      todo.done,
+        recurrence: todo.recurrence && todo.recurrence !== "none" ? todo.recurrence : null,
+        priority:  null,
+        orderIdx:  idx,
       });
     });
 
@@ -171,9 +172,11 @@ const Agenda = (() => {
     const today    = _dayStr(now);
     const tomorrow = _dayStr(new Date(now.getTime() + 86_400_000));
 
-    const dated   = items.filter(i => i.sortDate);
+    const overdue = items.filter(i => i.overdue);
+    const dated   = items.filter(i => i.sortDate && !i.overdue);
     const undated = items.filter(i => !i.sortDate);
 
+    overdue.sort((a, b) => a.sortDate - b.sortDate);
     dated.sort((a, b) => a.sortDate - b.sortDate);
 
     undated.sort((a, b) => {
@@ -185,6 +188,8 @@ const Agenda = (() => {
     });
 
     const groups = new Map();
+
+    if (overdue.length > 0) groups.set("Overdue", overdue);
 
     dated.forEach(item => {
       const key = _dayStr(item.sortDate);
@@ -227,7 +232,7 @@ const Agenda = (() => {
 
     groups.forEach((groupItems, label) => {
       const header = document.createElement("div");
-      header.className = "agenda-group-header";
+      header.className = "agenda-group-header" + (label === "Overdue" ? " agenda-group-header--overdue" : "");
       header.textContent = label;
       list.appendChild(header);
       groupItems.forEach(item => list.appendChild(_renderItem(item)));
@@ -256,6 +261,14 @@ const Agenda = (() => {
       title.className = "agenda-item-title" + (item.done ? " done" : "");
       title.textContent = item.title;
       body.appendChild(title);
+
+      if (item.recurrence) {
+        const badge = document.createElement("span");
+        badge.className = "recur-badge agenda-recur-badge";
+        badge.textContent = item.recurrence[0].toUpperCase();
+        badge.title = item.recurrence;
+        body.appendChild(badge);
+      }
 
       const del = document.createElement("button");
       del.className = "agenda-todo-del";

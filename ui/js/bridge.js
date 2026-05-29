@@ -225,6 +225,13 @@ const Bridge = (() => {
         return;
       }
 
+      // ? — show keyboard shortcuts help
+      if (e.key === "?") {
+        e.preventDefault();
+        document.getElementById("shortcuts-modal").classList.remove("hidden");
+        return;
+      }
+
       // Tab — add child to selected node
       if (e.key === "Tab") {
         e.preventDefault();
@@ -400,6 +407,15 @@ const ContextMenu = (() => {
     Detail.openCrossLinkModal(State.getSelectedId());
   });
 
+  document.getElementById("ctx-duplicate").addEventListener("click", () => {
+    const id = State.getSelectedId();
+    if (id) {
+      const newId = State.duplicateNode(id);
+      if (newId) Detail.open(newId);
+    }
+    hide();
+  });
+
   document.getElementById("ctx-move-to").addEventListener("click", async () => {
     const node = State.getSelectedNode();
     hide();
@@ -422,6 +438,17 @@ const ContextMenu = (() => {
   document.addEventListener("contextmenu", () => hide());
 
   return { show, hide };
+})();
+
+// ── Shortcuts modal ───────────────────────────────────────────────────
+(() => {
+  const modal = document.getElementById("shortcuts-modal");
+  const close = () => modal.classList.add("hidden");
+  modal.querySelectorAll(".modal-close").forEach(btn => btn.addEventListener("click", close));
+  modal.addEventListener("click", e => { if (e.target === modal) close(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) { close(); e.stopPropagation(); }
+  }, true);
 })();
 
 // ── Start ─────────────────────────────────────────────────────────────

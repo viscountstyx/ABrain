@@ -477,7 +477,8 @@ class Api:
         cal = ICalendar.from_ical(raw)
         now = datetime.now(timezone.utc)
         day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        window_end = day_start + timedelta(days=7)
+        lookahead = int(cfg.get("lookaheadDays", 7))
+        window_end = day_start + timedelta(days=lookahead)
 
         # recurring_ical_events expands RRULE/RDATE/EXDATE into individual occurrences
         occurrences = recurring_ical_events.of(cal).between(day_start, window_end)

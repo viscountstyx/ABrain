@@ -9,6 +9,10 @@ const Tasks = (() => {
   let _calEvents = [];
   let _refreshTimer = null;
   let _updateListeners = [];
+  let _jiraSyncedAt = null;
+  let _jiraError    = null;
+  let _calSyncedAt  = null;
+  let _calError     = null;
 
   const REFRESH_MS = 5 * 60 * 1000;
   const COLLAPSE_KEY = "abrain-tasks-collapse";
@@ -190,6 +194,26 @@ const Tasks = (() => {
     });
   }
 
+  // ── Sync status display ───────────────────────────────────────────────
+
+  function _setSyncStatus(elId, syncedAt, error) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (error) {
+      el.textContent = "⚠";
+      el.title = "Sync failed: " + error;
+      el.className = "sync-status sync-status--error";
+    } else if (syncedAt) {
+      const mins = Math.floor((Date.now() - syncedAt) / 60000);
+      el.textContent = mins < 1 ? "just now" : `${mins}m ago`;
+      el.title = "Last synced " + new Date(syncedAt).toLocaleTimeString();
+      el.className = "sync-status";
+    } else {
+      el.textContent = "";
+      el.className = "sync-status";
+    }
+  }
+
   // ── Jira ──────────────────────────────────────────────────────────────
 
   let _prevJiraKeys = new Set();
@@ -198,8 +222,15 @@ const Tasks = (() => {
     const prevKeys = new Set(_prevJiraKeys);
     try {
       const result = await window.pywebview.api.fetch_jira_issues();
-      _jiraIssues = result.issues || [];
-    } catch {
+      if (result.error) {
+        _jiraError = result.error;
+      } else {
+        _jiraIssues = result.issues || [];
+        _jiraError  = null;
+        _jiraSyncedAt = Date.now();
+      }
+    } catch (e) {
+      _jiraError = String(e);
       _jiraIssues = [];
     }
     const newKeys = new Set(_jiraIssues.map(i => i.key));
@@ -212,6 +243,7 @@ const Tasks = (() => {
     }
 
     _renderJira();
+    _setSyncStatus("jira-sync-status", _jiraSyncedAt, _jiraError);
   }
 
   function _syncJiraResolved(resolvedKeys) {
@@ -326,11 +358,19 @@ const Tasks = (() => {
   async function _loadCal() {
     try {
       const result = await window.pywebview.api.fetch_calendar_events();
-      _calEvents = result.events || [];
-    } catch {
+      if (result.error) {
+        _calError = result.error;
+      } else {
+        _calEvents = result.events || [];
+        _calError  = null;
+        _calSyncedAt = Date.now();
+      }
+    } catch (e) {
+      _calError = String(e);
       _calEvents = [];
     }
     _renderCal();
+    _setSyncStatus("cal-sync-status", _calSyncedAt, _calError);
     _notifyUpdate();
   }
 
@@ -398,6 +438,11 @@ const Tasks = (() => {
       await _loadJira();
       await _loadCal();
     }, REFRESH_MS);
+    // Refresh the "X min ago" labels every minute without re-fetching
+    setInterval(() => {
+      _setSyncStatus("jira-sync-status", _jiraSyncedAt, _jiraError);
+      _setSyncStatus("cal-sync-status",  _calSyncedAt,  _calError);
+    }, 60_000);
   }
 
   // ── Public ────────────────────────────────────────────────────────────

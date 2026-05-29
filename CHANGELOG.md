@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-05-29
+
+### Added
+- Custom node fill colours now render on the mind map (priority ring stroke is preserved)
+- Keyboard shortcut help modal — press `?` anywhere on the canvas to open it
+- Overdue nodes show a dashed red ring on the mind map
+- Agenda: "Overdue" group pinned to the top for past-due items
+- Agenda: recurring badge shown next to repeating todo items
+- Duplicate node — right-click any node and choose "Duplicate" to create a sibling copy
+- Jira and Calendar sidebar headers show a "last synced X min ago" timestamp; a ⚠ badge appears on fetch failure
+- Settings Data tab auto-runs the broken-link scan on open and shows a count next to the section title
+- Broken cross-map links in the detail panel are highlighted in red with a descriptive reason
+
+### Changed
+- Calendar lookahead window is now configurable in Settings → Integrations (7 / 14 / 30 / 60 days; default 7)
+
 ## [1.0.3] - 2026-05-29
 
 ### Fixed

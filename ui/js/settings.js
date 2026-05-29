@@ -95,6 +95,7 @@ const Settings = (() => {
     document.getElementById("settings-int-jira-user").value     = jira.username || "";
     document.getElementById("settings-int-jira-token").value    = jira.token    || "";
     document.getElementById("settings-int-cal-url").value       = cal.icsUrl    || "";
+    document.getElementById("settings-int-cal-days").value      = String(cal.lookaheadDays ?? 7);
   }
 
   // ── Tab switching ─────────────────────────────────────────────────────
@@ -119,6 +120,26 @@ const Settings = (() => {
       _renderMapStats(result.maps || []);
     } catch (e) {
       el.innerHTML = "<div class='settings-error'>Failed to load map stats.</div>";
+    }
+    _refreshBrokenCount();
+  }
+
+  async function _refreshBrokenCount() {
+    const countEl = document.getElementById("settings-broken-count");
+    if (!countEl) return;
+    try {
+      const result = await window.pywebview.api.scan_broken_links();
+      const n = (result.broken || []).length;
+      if (n > 0) {
+        countEl.textContent = n;
+        countEl.title = `${n} broken link${n !== 1 ? "s" : ""} found`;
+        countEl.className = "settings-broken-count settings-broken-count--warn";
+      } else {
+        countEl.textContent = "";
+        countEl.className = "settings-broken-count";
+      }
+    } catch {
+      countEl.textContent = "";
     }
   }
 
@@ -292,6 +313,7 @@ const Settings = (() => {
       resultEl.innerHTML =
         `<div class='settings-ok'>Removed ${n} broken link${n !== 1 ? "s" : ""}.</div>`;
       fixBtn.classList.add("hidden");
+      _refreshBrokenCount();
     } catch (e) {
       fixBtn.disabled = false;
       resultEl.innerHTML = "<div class='settings-error'>Fix failed.</div>";
@@ -323,8 +345,9 @@ const Settings = (() => {
         token:    document.getElementById("settings-int-jira-token").value.trim(),
       },
       calendar: {
-        icsUrl: document.getElementById("settings-int-cal-url").value.trim(),
-        email:  ((_config || {}).calendar || {}).email || "",
+        icsUrl:        document.getElementById("settings-int-cal-url").value.trim(),
+        lookaheadDays: parseInt(document.getElementById("settings-int-cal-days").value, 10),
+        email:         ((_config || {}).calendar || {}).email || "",
       },
     };
 

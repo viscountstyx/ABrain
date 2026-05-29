@@ -123,12 +123,14 @@ const MindMap = (() => {
       const n = nodes[id];
       if (!n) return null;
       const collapsed = _collapsedIds.has(id);
+      const today = new Date().toISOString().slice(0, 10);
       return {
         id:            n.id,
         title:         n.title,
         status:        n.status,
         priority:      n.priority,
         color:         n.color,
+        overdue:       !!n.dueDate && n.dueDate < today && n.status !== "resolved",
         collapsed,
         hiddenChildCount: collapsed ? n.childIds.length : 0,
         crossMapLinks: n.crossMapLinks || [],
@@ -208,11 +210,11 @@ const MindMap = (() => {
         const priorityClass = d.data.priority ? ` priority-${d.data.priority}` : "";
         const selected      = d.data.id === selectedId ? " selected" : "";
         const dimmed        = _dimmedIds.has(d.data.id) ? " dimmed" : "";
-        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}`;
+        const overdue       = d.data.overdue ? " overdue" : "";
+        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}`;
       })
       .attr("r", d => d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2))
-      .style("fill", d => d.data.color || null)
-      .style("stroke", d => d.data.color || null);
+      .style("fill", d => d.data.color || null);
 
     // Labels
     nodeG.append("text")

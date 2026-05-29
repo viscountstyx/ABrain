@@ -333,6 +333,7 @@ select { width: 100%; }
 
 .node-circle.selected { stroke-width: 3; filter: drop-shadow(0 0 6px currentColor); }
 .node-circle.dimmed   { opacity: 0.18; }
+.node-circle.overdue  { stroke: var(--node-blocked); stroke-dasharray: 3 2; stroke-width: 2.5; }
 
 /* Priority ring — overrides status stroke; placed after status rules so it wins */
 .node-circle.priority-high   { stroke: var(--priority-high);   stroke-width: 3; }
@@ -475,6 +476,18 @@ select { width: 100%; }
   padding: 0 6px;
   min-width: 18px;
   text-align: center;
+}
+
+.sync-status {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.sync-status--error {
+  color: var(--node-blocked);
+  font-weight: 700;
 }
 
 .tasks-sub-arrow {
@@ -871,6 +884,8 @@ select { width: 100%; }
   font-size: 12px;
 }
 .crosslink-item .crosslink-remove:hover { color: var(--priority-high); }
+.crosslink-item--broken { background: color-mix(in srgb, var(--node-blocked) 12%, transparent); }
+.crosslink-item--broken .crosslink-label { color: var(--node-blocked); cursor: default; }
 #btn-add-crosslink {
   padding: 4px 10px;
   border-radius: var(--radius-sm);
@@ -1074,6 +1089,9 @@ select { width: 100%; }
   top: 0;
   z-index: 1;
   border-bottom: 1px solid var(--border);
+}
+.agenda-group-header--overdue {
+  color: var(--node-blocked);
 }
 
 .agenda-item {
@@ -1281,6 +1299,49 @@ select { width: 100%; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ═══════════════════════════════════════
+   Shortcuts modal
+═══════════════════════════════════════ */
+.modal--shortcuts {
+  width: min(480px, 92vw);
+}
+.shortcuts-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.shortcuts-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.shortcuts-table td {
+  padding: 4px 0;
+  vertical-align: middle;
+  font-size: 0.857rem;
+  color: var(--text-primary);
+}
+.shortcuts-table td:first-child {
+  width: 55%;
+  white-space: nowrap;
+}
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
 
 /* ═══════════════════════════════════════
    Settings modal
@@ -1504,6 +1565,18 @@ select { width: 100%; }
 }
 
 /* Broken links results */
+.settings-broken-count {
+  display: none;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.settings-broken-count--warn {
+  display: inline-block;
+  color: var(--node-blocked);
+}
+
 .settings-broken-list {
   margin-top: 10px;
   border: 1px solid var(--border);

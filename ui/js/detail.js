@@ -249,19 +249,36 @@ const Detail = (() => {
       const row = document.createElement("div");
       row.className = "crosslink-item";
 
+      const mapMeta = Maps.getMaps().find(m => m.id === link.mapId);
+      const mapMissing = !mapMeta;
+
       const label = document.createElement("span");
       label.className = "crosslink-label";
       label.textContent = `${link.mapId.slice(0, 6)}… / ${link.nodeId.slice(0, 6)}…`;
       label.title = "Click to navigate";
 
-      // Fetch human-readable label
-      window.pywebview.api.get_node_title(link.mapId, link.nodeId)
-        .then(res => {
-          const mapMeta = Maps.getMaps().find(m => m.id === link.mapId);
-          const mapName = mapMeta ? mapMeta.name : link.mapId.slice(0, 6);
-          label.textContent = `${mapName} → ${res.title || "(unknown)"}`;
-        })
-        .catch(() => {});
+      if (mapMissing) {
+        row.classList.add("crosslink-item--broken");
+        label.textContent = "(deleted map)";
+        label.title = "This map no longer exists";
+      } else {
+        // Fetch human-readable label; mark broken if node is gone
+        window.pywebview.api.get_node_title(link.mapId, link.nodeId)
+          .then(res => {
+            const mapName = mapMeta.name;
+            if (!res.title) {
+              row.classList.add("crosslink-item--broken");
+              label.textContent = `${mapName} → (missing node)`;
+              label.title = "This node no longer exists";
+            } else {
+              label.textContent = `${mapName} → ${res.title}`;
+            }
+          })
+          .catch(() => {
+            row.classList.add("crosslink-item--broken");
+            label.textContent = "(error resolving link)";
+          });
+      }
 
       label.addEventListener("click", () => Maps.navigateTo(link.mapId, link.nodeId));
 
