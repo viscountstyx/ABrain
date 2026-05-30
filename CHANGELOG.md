@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.1] - 2026-05-30
+
+### Fixed
+- Recurring task nodes now always appear in the agenda, even without a status or due date set
+
 ## [1.3.0] - 2026-05-30
 
 ### Added

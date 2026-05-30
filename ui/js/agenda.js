@@ -120,9 +120,10 @@ const Agenda = (() => {
         if (node.id === rootId) return;
         if (node.status === "resolved") return;
         if (node.hiddenUntil && new Date(node.hiddenUntil) > new Date()) return;
-        const hasStatus = !!node.status;
-        const hasDue    = !!node.dueDate;
-        if (!hasStatus && !hasDue) return;
+        const hasStatus   = !!node.status;
+        const hasDue      = !!node.dueDate;
+        const hasRecur    = !!node.recurrenceType;
+        if (!hasStatus && !hasDue && !hasRecur) return;
 
         const sd = node.dueDate ? new Date(node.dueDate + "T00:00:00") : null;
         items.push({
