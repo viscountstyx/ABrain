@@ -127,16 +127,19 @@ const Agenda = (() => {
 
         const sd = node.dueDate ? new Date(node.dueDate + "T00:00:00") : null;
         items.push({
-          type:     "node",
-          id:       `node:${mapId}:${node.id}`,
-          nodeId:   node.id,
+          type:              "node",
+          id:                `node:${mapId}:${node.id}`,
+          nodeId:            node.id,
           mapId,
-          title:    node.title,
-          path:     _buildPath(entry, node.id),
-          sortDate: sd,
-          overdue:  _isOverdue(sd),
-          status:   node.status,
-          priority: node.priority,
+          title:             node.title,
+          path:              _buildPath(entry, node.id),
+          sortDate:          sd,
+          overdue:           _isOverdue(sd),
+          status:            node.status,
+          priority:          node.priority,
+          recurrenceType:    node.recurrenceType    || null,
+          recurrenceInterval: node.recurrenceInterval || null,
+          recurrenceUnit:    node.recurrenceUnit    || null,
         });
       });
     });
@@ -217,6 +220,60 @@ const Agenda = (() => {
     if (undated.length > 0) groups.set("No date", undated);
 
     return groups;
+  }
+
+  // ── Recurring task completion ────────────────────────────────────────
+
+  function _addIntervalLocal(base, interval, unit) {
+    const d = new Date(base);
+    const n = parseInt(interval, 10) || 1;
+    switch (unit) {
+      case "hours":  d.setHours(d.getHours() + n);   break;
+      case "weeks":  d.setDate(d.getDate() + n * 7);  break;
+      case "months": d.setMonth(d.getMonth() + n);    break;
+      default:       d.setDate(d.getDate() + n);
+    }
+    return d;
+  }
+
+  async function _completeRecurringNode(item) {
+    if (item.mapId === Maps.getActiveId()) {
+      // Delegate to State — it already handles recurring rollover
+      State.updateNode(item.nodeId, { status: "resolved" });
+      return;
+    }
+
+    // Non-active map: apply recurrence logic inline then save
+    try {
+      const mapData = await window.pywebview.api.load_map(item.mapId);
+      const node = mapData.nodes && mapData.nodes[item.nodeId];
+      if (!node) return;
+
+      const now  = new Date();
+      const base = node.recurrenceType === "completion"
+        ? now
+        : (node.dueDate ? new Date(node.dueDate + "T00:00:00") : now);
+      const next = _addIntervalLocal(base, node.recurrenceInterval || 1, node.recurrenceUnit || "days");
+
+      node.status      = null;
+      node.hiddenUntil = next.toISOString();
+      node.dueDate     = next.toISOString().slice(0, 10);
+      node.updatedAt   = now.toISOString();
+
+      await window.pywebview.api.save_map(item.mapId, mapData);
+
+      // Refresh cache entry
+      _mapCache[item.mapId] = {
+        mapName: mapData.mapName,
+        mapId:   item.mapId,
+        nodes:   mapData.nodes || {},
+        rootId:  mapData.rootNodeId,
+      };
+    } catch (e) {
+      console.error("Agenda: failed to complete recurring node on non-active map", e);
+    }
+
+    render();
   }
 
   // ── Render ───────────────────────────────────────────────────────────
@@ -350,10 +407,18 @@ const Agenda = (() => {
         badge.textContent = item.priority;
         meta.appendChild(badge);
       }
+      if (item.recurrenceType) {
+        const recurBadge = document.createElement("span");
+        recurBadge.className = "recur-badge agenda-recur-badge";
+        const unitShort = { hours: "h", days: "d", weeks: "w", months: "mo" }[item.recurrenceUnit] || "d";
+        recurBadge.textContent = `↻ ${item.recurrenceInterval || 1}${unitShort}`;
+        recurBadge.title = `Recurring every ${item.recurrenceInterval || 1} ${item.recurrenceUnit || "days"} (${item.recurrenceType})`;
+        meta.appendChild(recurBadge);
+      }
 
       body.appendChild(title);
       body.appendChild(path);
-      if (meta.textContent) body.appendChild(meta);
+      if (meta.childNodes.length) body.appendChild(meta);
       el.appendChild(dot);
       el.appendChild(body);
 
@@ -376,6 +441,19 @@ const Agenda = (() => {
           snoozeWrap.appendChild(btn);
         });
         el.appendChild(snoozeWrap);
+      }
+
+      // Complete button (recurring nodes only — marks done and rolls over to next occurrence)
+      if (item.recurrenceType) {
+        const completeBtn = document.createElement("button");
+        completeBtn.className = "agenda-complete-btn";
+        completeBtn.textContent = "✓";
+        completeBtn.title = "Mark done — schedules next occurrence";
+        completeBtn.addEventListener("click", e => {
+          e.stopPropagation();
+          _completeRecurringNode(item);
+        });
+        el.appendChild(completeBtn);
       }
 
       el.addEventListener("click", () => {

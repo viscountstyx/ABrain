@@ -1410,6 +1410,23 @@ select { width: 100%; }
 }
 .agenda-snooze-btn:hover { background: var(--accent-dim); color: var(--text-primary); }
 
+.agenda-complete-btn {
+  display: none;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 0 6px;
+  margin-left: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 1.6;
+}
+.agenda-item--node:hover .agenda-complete-btn { display: block; }
+.agenda-complete-btn:hover { background: rgba(166,227,161,0.2); color: var(--priority-low); border-color: var(--priority-low); }
+
 /* ═══════════════════════════════════════
    Resizers
 ═══════════════════════════════════════ */

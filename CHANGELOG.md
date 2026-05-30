@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.8] - 2026-05-30
+
+### Added
+- Recurring map-node tasks in the agenda now show a "✓" complete button on hover; clicking it marks the task done and schedules the next occurrence (rolls over the due date), working for both the active map and any other loaded map
+- Recurring agenda items now display a recurrence badge (e.g. `↻ 1d`) showing the interval so it's clear the item will reappear
+
 ## [1.3.7] - 2026-05-30
 
 ### Changed
