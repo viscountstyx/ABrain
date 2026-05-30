@@ -121,11 +121,13 @@ const Detail = (() => {
 
     // Recurrence fields
     const recurType = node.recurrenceType || "";
-    document.getElementById("detail-recur-type").value     = recurType;
-    document.getElementById("detail-recur-interval").value = node.recurrenceInterval || 1;
-    document.getElementById("detail-recur-unit").value     = node.recurrenceUnit || "days";
-    document.getElementById("detail-recur-interval-row").classList.toggle("hidden", !recurType);
-    document.getElementById("detail-recur-hint").classList.toggle("hidden", !recurType);
+    document.getElementById("btn-add-recur").classList.toggle("hidden", !!recurType);
+    document.getElementById("detail-recur-controls").classList.toggle("hidden", !recurType);
+    if (recurType) {
+      document.getElementById("detail-recur-type").value     = recurType;
+      document.getElementById("detail-recur-interval").value = node.recurrenceInterval || 1;
+      document.getElementById("detail-recur-unit").value     = node.recurrenceUnit || "days";
+    }
 
     _suppressUpdate = false;
   }
@@ -630,12 +632,24 @@ const Detail = (() => {
     });
 
     // Recurrence fields
+    document.getElementById("btn-add-recur").addEventListener("click", () => {
+      if (!_currentId) return;
+      document.getElementById("btn-add-recur").classList.add("hidden");
+      document.getElementById("detail-recur-controls").classList.remove("hidden");
+      document.getElementById("detail-recur-type").value     = "fixed";
+      document.getElementById("detail-recur-interval").value = 1;
+      document.getElementById("detail-recur-unit").value     = "days";
+      State.updateNode(_currentId, { recurrenceType: "fixed", recurrenceInterval: 1, recurrenceUnit: "days" });
+    });
+    document.getElementById("btn-remove-recur").addEventListener("click", () => {
+      if (!_currentId) return;
+      document.getElementById("btn-add-recur").classList.remove("hidden");
+      document.getElementById("detail-recur-controls").classList.add("hidden");
+      State.updateNode(_currentId, { recurrenceType: null, recurrenceInterval: null, recurrenceUnit: null });
+    });
     document.getElementById("detail-recur-type").addEventListener("change", () => {
       if (_suppressUpdate || !_currentId) return;
-      const val = document.getElementById("detail-recur-type").value || null;
-      State.updateNode(_currentId, { recurrenceType: val });
-      document.getElementById("detail-recur-interval-row").classList.toggle("hidden", !val);
-      document.getElementById("detail-recur-hint").classList.toggle("hidden", !val);
+      State.updateNode(_currentId, { recurrenceType: document.getElementById("detail-recur-type").value });
     });
     document.getElementById("detail-recur-interval").addEventListener("change", () => {
       if (_suppressUpdate || !_currentId) return;

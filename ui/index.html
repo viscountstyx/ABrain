@@ -273,22 +273,25 @@
 
         <div class="field-group">
           <label>Recurrence</label>
-          <select id="detail-recur-type">
-            <option value="">No recurrence</option>
-            <option value="fixed">Fixed schedule</option>
-            <option value="completion">Offset from completion</option>
-          </select>
-          <div id="detail-recur-interval-row" class="recur-interval-row hidden">
-            <span class="cal-sub-label">Every</span>
-            <input id="detail-recur-interval" type="number" min="1" max="999" value="1" />
-            <select id="detail-recur-unit">
-              <option value="hours">hours</option>
-              <option value="days">days</option>
-              <option value="weeks">weeks</option>
-              <option value="months">months</option>
+          <button id="btn-add-recur">＋ Add recurrence</button>
+          <div id="detail-recur-controls" class="hidden">
+            <select id="detail-recur-type">
+              <option value="fixed">Fixed schedule</option>
+              <option value="completion">Offset from completion</option>
             </select>
+            <div class="recur-interval-row">
+              <span class="cal-sub-label">Every</span>
+              <input id="detail-recur-interval" type="number" min="1" max="999" value="1" />
+              <select id="detail-recur-unit">
+                <option value="hours">hours</option>
+                <option value="days">days</option>
+                <option value="weeks">weeks</option>
+                <option value="months">months</option>
+              </select>
+            </div>
+            <p class="field-hint">On completion, this node hides until the next instance is due.</p>
+            <button id="btn-remove-recur" class="btn-text-link">Remove recurrence</button>
           </div>
-          <p id="detail-recur-hint" class="field-hint hidden">On completion, this node hides until the next instance is due.</p>
         </div>
 
       </div>

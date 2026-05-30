@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.2] - 2026-05-30
+
+### Changed
+- Recurrence field in the node detail panel is now collapsed behind a "＋ Add recurrence" button; only expands when a recurrence is configured, reducing scrolling for ordinary nodes
+
 ## [1.3.1] - 2026-05-30
 
 ### Fixed
