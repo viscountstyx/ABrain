@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.7] - 2026-05-30
+
+### Changed
+- Node detail modal width reduced to 80% of window (max 1200px); removed forced minimum width
+
+## [1.3.6] - 2026-05-30
+
+### Fixed
+- Node detail modal width was being overridden by the base modal class; now correctly renders at full two-column width
+
 ## [1.3.5] - 2026-05-30
 
 ### Changed

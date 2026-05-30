@@ -530,10 +530,9 @@ select { width: 100%; }
 /* ═══════════════════════════════════════
    Node detail modal
 ═══════════════════════════════════════ */
-.modal--node {
-  min-width: 1100px;
-  max-width: 1400px;
-  width: 96%;
+.modal.modal--node {
+  max-width: 1200px;
+  width: 80%;
 }
 
 #detail-content {
