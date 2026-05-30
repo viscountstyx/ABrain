@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.2] - 2026-05-30
+
+### Changed
+- README: added Arch / Manjaro system-package requirements, fixed duplicate Option B label, updated run-from-source instructions to reflect that `install.sh` now handles venv creation and dependency installation automatically
+
+## [1.2.1] - 2026-05-30
+
+### Changed
+- `install.sh` now automatically creates the Python virtualenv and installs dependencies from `requirements.txt`, so a single `./install.sh` is all that is needed on any Linux distro (including Arch-based systems)
+
 ## [1.2.0] - 2026-05-29
 
 ### Added

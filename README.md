@@ -30,9 +30,10 @@ recurring-ical-events
 
 System packages required at runtime:
 
-```
-python3  python3-venv  python3-pip  libgl1
-```
+| Distro | Packages |
+|--------|----------|
+| Debian / Ubuntu | `python3` `python3-venv` `python3-pip` `libgl1` |
+| Arch / Manjaro | `python` (includes venv and pip) |
 
 ## Installation
 
@@ -61,12 +62,27 @@ To uninstall:
 sudo dpkg -r abrain
 ```
 
-### Option B — Run from source
+### Option C — Run from source (all distros, including Arch)
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install pywebview[qt] PySide6 icalendar recurring-ical-events
-./install.sh        # registers the KDE launcher entry
+./install.sh
+```
+
+`install.sh` will:
+1. Create a Python virtualenv at `.venv` (if not already present)
+2. Install all Python dependencies from `requirements.txt`
+3. Register the app in the system application launcher
+
+The only prerequisite is `python3`. On Arch-based systems:
+
+```bash
+sudo pacman -S python   # if not already installed
+./install.sh
+```
+
+To launch without using the app menu:
+
+```bash
 .venv/bin/python main.py
 ```
 
