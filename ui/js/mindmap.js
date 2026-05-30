@@ -157,24 +157,37 @@ const MindMap = (() => {
     if (!hierarchyData) return;
 
     const root = d3.hierarchy(hierarchyData);
-    const nodeCount = root.descendants().length;
 
-    // Scale radius by tree density — wider base, faster growth to reduce label overlap
-    const baseRadius = Math.min(_width, _height) * 0.30;
-    const radius = nodeCount > 20 ? baseRadius * (1 + (nodeCount - 20) * 0.012) : baseRadius;
+    // ── Bilateral mind-map layout ─────────────────────────────────────
+    // Split root's children into right (first half) and left (second half)
+    // so the map fans symmetrically from the centre like a traditional mind map.
+    const allChildren = root.children || [];
+    const nRight = Math.ceil(allChildren.length / 2);
 
-    // Radial tree layout — generous separation to reduce label overlap
-    const treeLayout = d3.tree()
-      .size([2 * Math.PI, radius])
-      .separation((a, b) => (a.parent === b.parent ? 1.0 : 1.5) / a.depth);
+    function _tagSide(node, side) {
+      node._side = side;
+      (node.children || []).forEach(c => _tagSide(c, side));
+    }
+    root._side = 'center';
+    allChildren.slice(0, nRight).forEach(c => _tagSide(c, 'right'));
+    allChildren.slice(nRight).forEach(c => _tagSide(c, 'left'));
 
-    treeLayout(root);
+    // nodeSize gives each node a fixed vertical slot → no crowding
+    const V_SPACING = 52;   // vertical gap between sibling rows (px)
+    const H_SPACING = 170;  // horizontal distance per depth level (px)
+    d3.tree().nodeSize([V_SPACING, H_SPACING])(root);
 
-    // Polar → Cartesian
+    // d3.tree: d.x = vertical position, d.y = depth * H_SPACING
+    // Map to screen: x_cart = horizontal, y_cart = vertical
     root.each(d => {
-      d.x_cart = d.y * Math.cos(d.x - Math.PI / 2);
-      d.y_cart = d.y * Math.sin(d.x - Math.PI / 2);
+      const xSign = d._side === 'left' ? -1 : 1;
+      d.x_cart = d.y * xSign;
+      d.y_cart = d.x;
     });
+
+    // Translate so root sits at (0, 0) in the centred group
+    const rootXC = root.x_cart, rootYC = root.y_cart;
+    root.each(d => { d.x_cart -= rootXC; d.y_cart -= rootYC; });
 
     // Centre the tree in the SVG
     const g = _root.append("g")
@@ -189,10 +202,12 @@ const MindMap = (() => {
           const dimmed = _dimmedIds.has(d.target.data.id) || _dimmedIds.has(d.source.data.id);
           return "node-link" + (dimmed ? " dimmed" : "");
         })
-        .attr("d", d3.linkRadial()
-          .angle(d => d.x)
-          .radius(d => d.y)
-        );
+        .attr("d", d => {
+          const sx = d.source.x_cart, sy = d.source.y_cart;
+          const tx = d.target.x_cart, ty = d.target.y_cart;
+          const mx = (sx + tx) / 2;
+          return `M${sx},${sy} C${mx},${sy} ${mx},${ty} ${tx},${ty}`;
+        });
 
     // ── Nodes ──
     const nodeG = g.append("g").attr("class", "nodes")
@@ -225,15 +240,15 @@ const MindMap = (() => {
       })
       .attr("text-anchor", d => {
         if (d.depth === 0) return "middle";
-        return d.x_cart > 0 ? "start" : "end";
+        return d._side === 'left' ? "end" : "start";
       })
       .attr("dx", d => {
         if (d.depth === 0) return 0;
         const r = Math.max(6, 11 - d.depth * 1.2);
-        return d.x_cart > 0 ? r + 4 : -(r + 4);
+        return d._side === 'left' ? -(r + 6) : (r + 6);
       })
-      .attr("dy", d => d.depth === 0 ? 20 : 0)
-      .attr("dominant-baseline", d => d.depth === 0 ? "hanging" : "central")
+      .attr("dy", d => d.depth === 0 ? -(14 + 6) : 0)
+      .attr("dominant-baseline", d => d.depth === 0 ? "auto" : "central")
       .text(d => {
         const max = Settings.getNodeLabelLength();
         return d.data.title.length > max ? d.data.title.slice(0, max) + "…" : d.data.title;
@@ -253,10 +268,10 @@ const MindMap = (() => {
       .attr("class", "collapse-badge")
       .attr("dx", d => {
         const r = Math.max(6, 11 - d.depth * 1.2);
-        return d.x_cart >= 0 ? r + 2 : -(r + 2);
+        return d._side === 'left' ? -(r + 2) : (r + 2);
       })
-      .attr("dy", d => d.depth === 0 ? -6 : -8)
-      .attr("text-anchor", d => d.x_cart >= 0 ? "start" : "end")
+      .attr("dy", -8)
+      .attr("text-anchor", d => d._side === 'left' ? "end" : "start")
       .text(d => `+${d.data.hiddenChildCount}`);
 
     // ── Ghost nodes (cross-map links) ──
@@ -371,11 +386,11 @@ const MindMap = (() => {
       if (!d.data.crossMapLinks || d.data.crossMapLinks.length === 0) return;
 
       d.data.crossMapLinks.forEach((link, i) => {
-        // Place ghost as a satellite at an angular offset from the host node
-        const angleOffset = (Math.PI / 4) + i * (Math.PI / 6);
-        const ghostRadius = 60;
-        const gx = d.x_cart + ghostRadius * Math.cos(d.x - Math.PI / 2 + angleOffset);
-        const gy = d.y_cart + ghostRadius * Math.sin(d.x - Math.PI / 2 + angleOffset);
+        // Place ghost as a satellite above/below the host node on its outward side
+        const ghostRadius = 55;
+        const xSign = d._side === 'left' ? -1 : 1;
+        const gx = d.x_cart + xSign * ghostRadius * 0.7;
+        const gy = d.y_cart + (i % 2 === 0 ? -ghostRadius : ghostRadius) * 0.7;
 
         // Dashed link from host to ghost
         ghostG.append("line")

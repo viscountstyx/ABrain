@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.3] - 2026-05-30
+
+### Changed
+- Mind map now uses a bilateral layout: root node sits in the centre, children fan out to the right and left like a traditional mind map, eliminating the "straight line" appearance that occurred with shallow or linear trees
+- Links are drawn as smooth cubic-bezier S-curves instead of radial arcs
+- Node labels are always anchored on the outward side (right-side nodes label to the right, left-side nodes label to the left), removing overlap
+
 ## [1.2.2] - 2026-05-30
 
 ### Changed
