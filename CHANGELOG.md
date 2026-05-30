@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.6] - 2026-05-30
+
+### Added
+- Hovering any map node now reveals a `＋` button on its outward side; clicking it immediately adds a child and opens the detail panel for naming
+
+### Fixed
+- Related-node picker list no longer has a fixed height cap; the modal body scrolls if needed instead
+
 ## [1.2.5] - 2026-05-30
 
 ### Fixed

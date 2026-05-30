@@ -389,6 +389,18 @@ select { width: 100%; }
 }
 .node-link.dimmed { opacity: 0.08; }
 
+/* Hover add-child button on nodes */
+.node-add-btn {
+  fill: var(--accent);
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: all;
+  cursor: pointer;
+}
+.node-group:hover .node-add-btn { opacity: 0.8; }
+.node-add-btn:hover              { opacity: 1 !important; }
+
 /* Related links (same-map lateral connections) */
 .related-link {
   fill: none;
@@ -405,12 +417,21 @@ select { width: 100%; }
   opacity: 0.8;
 }
 
+#relatedlink-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 55vh;
+}
+
 /* field-optional helper */
+.field-optional { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
 .field-optional { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
 
 /* Node picker (custom select replacement — avoids native Qt dropdown freeze) */
 .node-picker-list {
-  max-height: 190px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

@@ -275,6 +275,25 @@ const MindMap = (() => {
       .attr("text-anchor", d => d._side === 'left' ? "end" : "start")
       .text(d => `+${d.data.hiddenChildCount}`);
 
+    // Hover "+" button — adds a child node on click
+    nodeG.append("text")
+      .attr("class", "node-add-btn")
+      .attr("dx", d => {
+        const r = d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2);
+        return d._side === 'left' ? -(r + 16) : (r + 16);
+      })
+      .attr("dy", 0)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "central")
+      .text("＋")
+      .on("click", (e, d) => {
+        e.stopPropagation();
+        ContextMenu.hide();
+        const newId = State.addNode(d.data.id, Settings.getDefaultNodeText());
+        Detail.open(newId);
+        setTimeout(() => Detail.focusTitleInput(), 30);
+      });
+
     // ── Related links (same-map lateral connections) ──
     _renderRelatedLinks(g, root.descendants());
 
