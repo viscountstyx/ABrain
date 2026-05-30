@@ -8,6 +8,7 @@
  *   notes, tags[], dueDate, priority: null | "high" | "medium" | "low",
  *   attachments[{ type: "url"|"file", value, label }],
  *   crossMapLinks[{ mapId, nodeId }],
+ *   relatedLinks[{ targetId, label }],
  *   createdAt, updatedAt
  * }
  *
@@ -72,6 +73,7 @@ const State = (() => {
       _nodes[id].tags          = [...(raw[id].tags || [])];
       _nodes[id].attachments   = (raw[id].attachments || []).map(a => Object.assign({}, a));
       _nodes[id].crossMapLinks = (raw[id].crossMapLinks || []).map(l => Object.assign({}, l));
+      _nodes[id].relatedLinks  = (raw[id].relatedLinks  || []).map(l => Object.assign({}, l));
     }
     _selectedNodeId = null;
     _notify();
@@ -94,6 +96,7 @@ const State = (() => {
         priority:      n.priority,
         attachments:   n.attachments.map(a => Object.assign({}, a)),
         crossMapLinks: n.crossMapLinks.map(l => Object.assign({}, l)),
+        relatedLinks:   (n.relatedLinks || []).map(l => Object.assign({}, l)),
         color:         n.color || null,
         createdAt:     n.createdAt,
         updatedAt:     n.updatedAt,
@@ -150,6 +153,7 @@ const State = (() => {
       priority:      null,
       attachments:   [],
       crossMapLinks: [],
+      relatedLinks:  [],
       createdAt:     now,
       updatedAt:     now,
     };
@@ -188,6 +192,14 @@ const State = (() => {
 
     collectDescendants(id);
 
+    // Clean up relatedLinks in remaining nodes that pointed to any deleted node
+    for (const nid in _nodes) {
+      const n = _nodes[nid];
+      if (!n.relatedLinks || n.relatedLinks.length === 0) continue;
+      const before = n.relatedLinks.length;
+      n.relatedLinks = n.relatedLinks.filter(l => _nodes[l.targetId]);
+      if (n.relatedLinks.length !== before) n.updatedAt = _now();
+    }
     if (_selectedNodeId === id || !_nodes[_selectedNodeId]) {
       _selectedNodeId = null;
     }
@@ -231,6 +243,7 @@ const State = (() => {
       dueDate:       src.dueDate || null,
       attachments:   JSON.parse(JSON.stringify(src.attachments || [])),
       crossMapLinks: [],
+      relatedLinks:  [],
       createdAt:     now,
       updatedAt:     now,
     };
@@ -243,6 +256,33 @@ const State = (() => {
     _selectedNodeId = newId;
     _notify();
     return newId;
+  }
+
+  function addRelatedLink(nodeId, targetId, label) {
+    const node   = _nodes[nodeId];
+    const target = _nodes[targetId];
+    if (!node || !target || nodeId === targetId) return;
+    if (!node.relatedLinks)   node.relatedLinks   = [];
+    if (!target.relatedLinks) target.relatedLinks = [];
+    if (node.relatedLinks.some(l => l.targetId === targetId)) return; // already linked
+    node.relatedLinks   = [...node.relatedLinks,   { targetId,  label: label || "" }];
+    target.relatedLinks = [...target.relatedLinks, { targetId: nodeId, label: label || "" }];
+    node.updatedAt   = _now();
+    target.updatedAt = _now();
+    _notify();
+  }
+
+  function removeRelatedLink(nodeId, targetId) {
+    const node   = _nodes[nodeId];
+    const target = _nodes[targetId];
+    if (!node) return;
+    node.relatedLinks = (node.relatedLinks || []).filter(l => l.targetId !== targetId);
+    node.updatedAt = _now();
+    if (target) {
+      target.relatedLinks = (target.relatedLinks || []).filter(l => l.targetId !== nodeId);
+      target.updatedAt = _now();
+    }
+    _notify();
   }
 
   function selectNode(id) {
@@ -283,6 +323,8 @@ const State = (() => {
     updateNode,
     deleteNode,
     moveNode,
+    addRelatedLink,
+    removeRelatedLink,
     selectNode,
     deselectNode,
     // Subscription

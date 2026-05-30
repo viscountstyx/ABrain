@@ -134,6 +134,7 @@ const MindMap = (() => {
         collapsed,
         hiddenChildCount: collapsed ? n.childIds.length : 0,
         crossMapLinks: n.crossMapLinks || [],
+        relatedLinks:  n.relatedLinks  || [],
         children:      collapsed ? [] : n.childIds.map(buildNode).filter(Boolean),
       };
     }
@@ -274,6 +275,9 @@ const MindMap = (() => {
       .attr("text-anchor", d => d._side === 'left' ? "end" : "start")
       .text(d => `+${d.data.hiddenChildCount}`);
 
+    // ── Related links (same-map lateral connections) ──
+    _renderRelatedLinks(g, root.descendants());
+
     // ── Ghost nodes (cross-map links) ──
     _renderGhostNodes(g, root.descendants());
 
@@ -375,6 +379,47 @@ const MindMap = (() => {
         _dragNodeId = _dropTargetId = _dragEl = null;
         _dragMoved = false;
       });
+  }
+
+  // ── Related links (same-map lateral connections) ──────────────────────
+
+  function _renderRelatedLinks(g, descendants) {
+    const relG = g.insert("g", ".nodes").attr("class", "related-links");
+
+    // Build a position map and deduplicate bidirectional pairs
+    const pos = {};
+    descendants.forEach(d => { pos[d.data.id] = { x: d.x_cart, y: d.y_cart }; });
+
+    const drawn = new Set();
+    descendants.forEach(d => {
+      (d.data.relatedLinks || []).forEach(link => {
+        const pairKey = [d.data.id, link.targetId].sort().join("\0");
+        if (drawn.has(pairKey)) return;
+        drawn.add(pairKey);
+
+        const tp = pos[link.targetId];
+        if (!tp) return;
+
+        const sx = d.x_cart, sy = d.y_cart;
+        const tx = tp.x,     ty = tp.y;
+        // Quadratic bezier arc that bows perpendicular to the straight line
+        const mx = (sx + tx) / 2 - (ty - sy) * 0.25;
+        const my = (sy + ty) / 2 + (tx - sx) * 0.25;
+
+        relG.append("path")
+          .attr("class", "related-link")
+          .attr("d", `M${sx},${sy} Q${mx},${my} ${tx},${ty}`);
+
+        if (link.label) {
+          relG.append("text")
+            .attr("class", "related-link-label")
+            .attr("x", mx)
+            .attr("y", my - 5)
+            .attr("text-anchor", "middle")
+            .text(link.label);
+        }
+      });
+    });
   }
 
   // ── Ghost nodes ───────────────────────────────────────────────────────

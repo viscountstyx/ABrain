@@ -252,10 +252,41 @@
           <button id="btn-add-crosslink">＋ Link to another map</button>
         </div>
 
+        <div class="field-group">
+          <label>Related nodes</label>
+          <div id="detail-relatedlinks-list"></div>
+          <button id="btn-add-relatedlink">＋ Relate to a node on this map</button>
+        </div>
+
       </div>
       <div class="modal-footer">
         <button id="btn-done-node">Done</button>
         <button id="btn-delete-node" class="danger-btn">Delete node</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RELATED LINK MODAL -->
+  <div id="relatedlink-modal" class="modal-backdrop hidden">
+    <div class="modal modal--small">
+      <div class="modal-header">
+        <span class="panel-title">Relate to node</span>
+        <button class="icon-btn modal-close">✕</button>
+      </div>
+      <div id="relatedlink-modal-body">
+        <div class="field-group">
+          <label for="relatedlink-search">Search nodes</label>
+          <input id="relatedlink-search" type="text" placeholder="Type to filter…" autocomplete="off" />
+          <div id="relatedlink-node-list" class="node-picker-list"></div>
+        </div>
+        <div class="field-group">
+          <label for="relatedlink-label-input">Relationship label <span class="field-optional">(optional)</span></label>
+          <input id="relatedlink-label-input" type="text" placeholder="e.g. depends on, blocks, related to…" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-relatedlink-confirm">Add link</button>
+        <button class="modal-close">Cancel</button>
       </div>
     </div>
   </div>

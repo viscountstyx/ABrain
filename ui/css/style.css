@@ -389,6 +389,49 @@ select { width: 100%; }
 }
 .node-link.dimmed { opacity: 0.08; }
 
+/* Related links (same-map lateral connections) */
+.related-link {
+  fill: none;
+  stroke: var(--accent-dim);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 3;
+  opacity: 0.65;
+  pointer-events: none;
+}
+.related-link-label {
+  font-size: 0.75rem;
+  fill: var(--text-secondary);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* field-optional helper */
+.field-optional { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
+
+/* Node picker (custom select replacement — avoids native Qt dropdown freeze) */
+.node-picker-list {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  background: var(--bg-surface);
+}
+.node-picker-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.857rem;
+  color: var(--text-primary);
+}
+.node-picker-item:hover   { background: var(--bg-hover); }
+.node-picker-item.selected { background: var(--accent-dim); color: var(--accent); }
+.node-picker-empty {
+  padding: 8px 10px;
+  font-size: 0.857rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* Empty state overlay */
 #empty-state {
   position: absolute;

@@ -111,6 +111,7 @@ const Detail = (() => {
     _renderTags(node.tags || []);
     _renderAttachments(node.attachments || []);
     _renderCrossLinks(node.crossMapLinks || []);
+    _renderRelatedLinks(node.relatedLinks || []);
 
     _suppressUpdate = false;
   }
@@ -416,6 +417,120 @@ const Detail = (() => {
     });
   }
 
+  // ── Related links (same-map lateral connections) ──────────────────────
+
+  function _renderRelatedLinks(links) {
+    const list = document.getElementById("detail-relatedlinks-list");
+    list.innerHTML = "";
+    links.forEach(link => {
+      const targetNode = State.getNode(link.targetId);
+      if (!targetNode) return; // stale link — skip rendering
+
+      const row = document.createElement("div");
+      row.className = "crosslink-item";
+
+      const label = document.createElement("span");
+      label.className = "crosslink-label";
+      label.textContent = link.label
+        ? `${targetNode.title} — ${link.label}`
+        : targetNode.title;
+      label.title = "Click to navigate";
+      label.addEventListener("click", () => {
+        State.selectNode(link.targetId);
+        Detail.open(link.targetId);
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "crosslink-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.title = "Remove link";
+      removeBtn.addEventListener("click", () => {
+        State.removeRelatedLink(_currentId, link.targetId);
+      });
+
+      row.appendChild(label);
+      row.appendChild(removeBtn);
+      list.appendChild(row);
+    });
+  }
+
+  function _setupRelatedLinkModal() {
+    let _selectedRelatedId = null;
+    const modal    = document.getElementById("relatedlink-modal");
+    const search   = document.getElementById("relatedlink-search");
+    const listEl   = document.getElementById("relatedlink-node-list");
+    const labelInp = document.getElementById("relatedlink-label-input");
+
+    function _close() {
+      modal.classList.add("hidden");
+      _selectedRelatedId = null;
+    }
+
+    function _renderPickerList(candidates, filter) {
+      listEl.innerHTML = "";
+      const lower = filter.toLowerCase();
+      const matches = filter
+        ? candidates.filter(n => n.title.toLowerCase().includes(lower))
+        : candidates;
+      matches.forEach(n => {
+        const item = document.createElement("div");
+        item.className = "node-picker-item" + (n.id === _selectedRelatedId ? " selected" : "");
+        item.textContent = n.title;
+        item.dataset.id = n.id;
+        item.addEventListener("click", () => {
+          _selectedRelatedId = n.id;
+          listEl.querySelectorAll(".node-picker-item").forEach(el =>
+            el.classList.toggle("selected", el.dataset.id === n.id));
+        });
+        listEl.appendChild(item);
+      });
+      if (matches.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "node-picker-empty";
+        empty.textContent = "No matching nodes.";
+        listEl.appendChild(empty);
+      }
+    }
+
+    document.getElementById("btn-add-relatedlink").addEventListener("click", () => {
+      if (!_currentId) return;
+      const currentNode = State.getNode(_currentId);
+      const alreadyLinked = new Set((currentNode?.relatedLinks || []).map(l => l.targetId));
+      alreadyLinked.add(_currentId);
+
+      const candidates = Object.values(State.getAllNodes()).filter(n => !alreadyLinked.has(n.id));
+      if (candidates.length === 0) {
+        alert("No other nodes to link to on this map.");
+        return;
+      }
+
+      _selectedRelatedId = null;
+      search.value = "";
+      labelInp.value = "";
+      _renderPickerList(candidates, "");
+
+      // Rebind filter for this open session
+      search.oninput = () => _renderPickerList(candidates, search.value);
+
+      modal.classList.remove("hidden");
+      setTimeout(() => search.focus(), 50);
+    });
+
+    document.getElementById("btn-relatedlink-confirm").addEventListener("click", () => {
+      if (!_currentId || !_selectedRelatedId) {
+        alert("Please select a node from the list.");
+        return;
+      }
+      const label = labelInp.value.trim();
+      State.addRelatedLink(_currentId, _selectedRelatedId, label);
+      _close();
+    });
+
+    document.querySelectorAll("#relatedlink-modal .modal-close").forEach(btn => {
+      btn.addEventListener("click", _close);
+    });
+  }
+
   // ── Delete button ─────────────────────────────────────────────────────
 
   function _setupDeleteButton() {
@@ -534,6 +649,7 @@ const Detail = (() => {
     _setupTagInput();
     _setupAttachmentButtons();
     _setupCrossLinkModal();
+    _setupRelatedLinkModal();
     _setupDeleteButton();
 
     // Close modal when clicking the backdrop (outside the card)

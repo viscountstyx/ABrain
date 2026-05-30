@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.5] - 2026-05-30
+
+### Fixed
+- Related-node picker no longer uses a native `<select>` dropdown, which caused a complete KDE/Qt freeze when opened; replaced with a custom search-and-click list that renders entirely in HTML
+
+## [1.2.4] - 2026-05-30
+
+### Added
+- Related nodes — any two nodes on the same map can now be linked sideways with an optional relationship label (e.g. "depends on", "blocks", "related to"); links are shown in the node detail panel and drawn as dashed arcs on the map; links are bidirectional and are cleaned up automatically when a node is deleted
+
 ## [1.2.3] - 2026-05-30
 
 ### Changed
