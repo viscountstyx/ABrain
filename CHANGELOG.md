@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.5] - 2026-05-30
+
+### Changed
+- Node detail modal is now wider (min 1100px, max 1400px) to give each column more breathing room
+
+## [1.3.4] - 2026-05-30
+
+### Changed
+- Node detail modal now shows two independent full-width columns side by side (metadata on the left, notes/tags/attachments/links on the right); modal widened to 1120px max
+
+## [1.3.3] - 2026-05-30
+
+### Changed
+- Node detail panel now uses a two-column layout: Colour/Priority, Due date/Recurrence, and Cross-map links/Related nodes are paired side by side; modal widened to 720px max
+
 ## [1.3.2] - 2026-05-30
 
 ### Changed

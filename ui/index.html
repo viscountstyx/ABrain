@@ -179,120 +179,128 @@
       </div>
       <div id="detail-content">
 
-        <div class="field-group">
-          <label for="detail-title">Title</label>
-          <input id="detail-title" type="text" />
-        </div>
+        <div class="detail-col">
 
-        <div class="field-group">
-          <label>Status</label>
-          <div id="detail-status" class="status-buttons">
-            <button class="status-btn" data-status="">None</button>
-            <button class="status-btn status-started"  data-status="started">Started</button>
-            <button class="status-btn status-blocked"  data-status="blocked">Blocked</button>
-            <button class="status-btn status-paused"   data-status="paused">Paused</button>
-            <button class="status-btn status-resolved" data-status="resolved">Resolved</button>
+          <div class="field-group">
+            <label for="detail-title">Title</label>
+            <input id="detail-title" type="text" />
           </div>
-        </div>
 
-        <div class="field-group">
-          <label>Colour</label>
-          <div class="color-row">
-            <input id="detail-color" type="color" title="Node colour override" />
-            <button id="btn-clear-color" class="inherit-due-btn" type="button">Clear</button>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label for="detail-priority">Priority</label>
-          <select id="detail-priority">
-            <option value="">— none —</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <label for="detail-due">Due date</label>
-          <div class="due-row">
-            <input id="detail-due" type="date" />
-            <button id="btn-inherit-due" class="inherit-due-btn" title="Use parent's due date" type="button">Inherit from parent</button>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label for="detail-notes">Notes</label>
-          <textarea id="detail-notes" rows="5"></textarea>
-        </div>
-
-        <div class="field-group">
-          <label>Tags</label>
-          <div id="detail-tags-container">
-            <div id="detail-tags-pills"></div>
-            <input id="detail-tag-input" type="text" placeholder="Add tag, press Enter" autocomplete="off" />
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>Attachments</label>
-          <div id="detail-attachments-list"></div>
-          <div class="attachment-add-row">
-            <input id="attach-url-input" type="url" placeholder="https://…" />
-            <button id="btn-attach-url">Add URL</button>
-          </div>
-          <div class="attachment-add-row">
-            <button id="btn-attach-file">Add File…</button>
-          </div>
-        </div>
-
-        <div class="field-group">
-          <label>Cross-map links</label>
-          <div id="detail-crosslinks-list"></div>
-          <button id="btn-add-crosslink">＋ Link to another map</button>
-        </div>
-
-        <div class="field-group">
-          <label>Related nodes</label>
-          <div id="detail-relatedlinks-list"></div>
-          <button id="btn-add-relatedlink">＋ Relate to a node on this map</button>
-        </div>
-
-        <div class="field-group hidden" id="detail-calendar-fields">
-          <label>Calendar event</label>
-          <div class="cal-datetime-row">
-            <span class="cal-sub-label">Start</span>
-            <input id="detail-cal-start" type="datetime-local" />
-          </div>
-          <div class="cal-datetime-row">
-            <span class="cal-sub-label">End</span>
-            <input id="detail-cal-end" type="datetime-local" />
-          </div>
-          <p class="field-hint">Disappears from the map after the end time.</p>
-        </div>
-
-        <div class="field-group">
-          <label>Recurrence</label>
-          <button id="btn-add-recur">＋ Add recurrence</button>
-          <div id="detail-recur-controls" class="hidden">
-            <select id="detail-recur-type">
-              <option value="fixed">Fixed schedule</option>
-              <option value="completion">Offset from completion</option>
-            </select>
-            <div class="recur-interval-row">
-              <span class="cal-sub-label">Every</span>
-              <input id="detail-recur-interval" type="number" min="1" max="999" value="1" />
-              <select id="detail-recur-unit">
-                <option value="hours">hours</option>
-                <option value="days">days</option>
-                <option value="weeks">weeks</option>
-                <option value="months">months</option>
-              </select>
+          <div class="field-group">
+            <label>Status</label>
+            <div id="detail-status" class="status-buttons">
+              <button class="status-btn" data-status="">None</button>
+              <button class="status-btn status-started"  data-status="started">Started</button>
+              <button class="status-btn status-blocked"  data-status="blocked">Blocked</button>
+              <button class="status-btn status-paused"   data-status="paused">Paused</button>
+              <button class="status-btn status-resolved" data-status="resolved">Resolved</button>
             </div>
-            <p class="field-hint">On completion, this node hides until the next instance is due.</p>
-            <button id="btn-remove-recur" class="btn-text-link">Remove recurrence</button>
           </div>
-        </div>
+
+          <div class="field-group">
+            <label>Colour</label>
+            <div class="color-row">
+              <input id="detail-color" type="color" title="Node colour override" />
+              <button id="btn-clear-color" class="inherit-due-btn" type="button">Clear</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="detail-priority">Priority</label>
+            <select id="detail-priority">
+              <option value="">— none —</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="detail-due">Due date</label>
+            <div class="due-row">
+              <input id="detail-due" type="date" />
+              <button id="btn-inherit-due" class="inherit-due-btn" title="Use parent's due date" type="button">Inherit from parent</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Recurrence</label>
+            <button id="btn-add-recur">＋ Add recurrence</button>
+            <div id="detail-recur-controls" class="hidden">
+              <select id="detail-recur-type">
+                <option value="fixed">Fixed schedule</option>
+                <option value="completion">Offset from completion</option>
+              </select>
+              <div class="recur-interval-row">
+                <span class="cal-sub-label">Every</span>
+                <input id="detail-recur-interval" type="number" min="1" max="999" value="1" />
+                <select id="detail-recur-unit">
+                  <option value="hours">hours</option>
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                  <option value="months">months</option>
+                </select>
+              </div>
+              <p class="field-hint">On completion, this node hides until the next instance is due.</p>
+              <button id="btn-remove-recur" class="btn-text-link">Remove recurrence</button>
+            </div>
+          </div>
+
+          <div class="field-group hidden" id="detail-calendar-fields">
+            <label>Calendar event</label>
+            <div class="cal-datetime-row">
+              <span class="cal-sub-label">Start</span>
+              <input id="detail-cal-start" type="datetime-local" />
+            </div>
+            <div class="cal-datetime-row">
+              <span class="cal-sub-label">End</span>
+              <input id="detail-cal-end" type="datetime-local" />
+            </div>
+            <p class="field-hint">Disappears from the map after the end time.</p>
+          </div>
+
+        </div><!-- .detail-col -->
+
+        <div class="detail-col">
+
+          <div class="field-group">
+            <label for="detail-notes">Notes</label>
+            <textarea id="detail-notes" rows="5"></textarea>
+          </div>
+
+          <div class="field-group">
+            <label>Tags</label>
+            <div id="detail-tags-container">
+              <div id="detail-tags-pills"></div>
+              <input id="detail-tag-input" type="text" placeholder="Add tag, press Enter" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Attachments</label>
+            <div id="detail-attachments-list"></div>
+            <div class="attachment-add-row">
+              <input id="attach-url-input" type="url" placeholder="https://…" />
+              <button id="btn-attach-url">Add URL</button>
+            </div>
+            <div class="attachment-add-row">
+              <button id="btn-attach-file">Add File…</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Cross-map links</label>
+            <div id="detail-crosslinks-list"></div>
+            <button id="btn-add-crosslink">＋ Link to another map</button>
+          </div>
+
+          <div class="field-group">
+            <label>Related nodes</label>
+            <div id="detail-relatedlinks-list"></div>
+            <button id="btn-add-relatedlink">＋ Relate to a node on this map</button>
+          </div>
+
+        </div><!-- .detail-col -->
 
       </div>
       <div class="modal-footer">
