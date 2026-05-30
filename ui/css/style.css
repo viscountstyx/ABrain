@@ -389,17 +389,25 @@ select { width: 100%; }
 }
 .node-link.dimmed { opacity: 0.08; }
 
-/* Hover add-child button on nodes */
-.node-add-btn {
+/* Floating add-child button (rendered above all nodes, no z-order issues) */
+.node-add-btn-float {
   fill: var(--accent);
-  font-size: 13px;
-  opacity: 0;
-  transition: opacity 0.15s;
-  pointer-events: all;
+  font-size: 14px;
+  transition: opacity 0.12s;
   cursor: pointer;
 }
-.node-group:hover .node-add-btn { opacity: 0.8; }
-.node-add-btn:hover              { opacity: 1 !important; }
+.node-add-btn-float:hover { fill: var(--text-primary); }
+
+/* Calendar and recurring node map visuals */
+.node-circle.node-calendar {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 2;
+}
+.node-circle.node-recurring {
+  stroke: var(--node-started);
+  stroke-width: 2;
+}
 
 /* Related links (same-map lateral connections) */
 .related-link {
@@ -428,6 +436,32 @@ select { width: 100%; }
 
 /* field-optional helper */
 .field-optional { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
+
+/* Calendar / recurrence detail panel helpers */
+.cal-datetime-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.cal-sub-label {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  min-width: 36px;
+  flex-shrink: 0;
+}
+.field-hint {
+  font-size: 0.78em;
+  color: var(--text-muted);
+  margin: 5px 0 0;
+}
+.recur-interval-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.recur-interval-row input[type="number"] { width: 56px; }
 .field-optional { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
 
 /* Node picker (custom select replacement — avoids native Qt dropdown freeze) */

@@ -74,6 +74,16 @@ const MindMap = (() => {
     // Subscribe to state changes
     State.subscribe(() => { _loadCollapsed(); render(); });
     _loadCollapsed();
+
+    // Un-hide recurring nodes when their hiddenUntil time arrives (check every minute)
+    setInterval(() => {
+      const now = new Date();
+      Object.values(State.getAllNodes()).forEach(n => {
+        if (n.hiddenUntil && new Date(n.hiddenUntil) <= now) {
+          State.updateNode(n.id, { hiddenUntil: null });
+        }
+      });
+    }, 60_000);
   }
 
   function _resize() {
@@ -122,20 +132,26 @@ const MindMap = (() => {
     function buildNode(id) {
       const n = nodes[id];
       if (!n) return null;
+      // Skip expired calendar events
+      if (n.nodeType === "calendar" && n.calEnd && new Date(n.calEnd) < new Date()) return null;
+      // Skip recurring nodes waiting for their next instance
+      if (n.hiddenUntil && new Date(n.hiddenUntil) > new Date()) return null;
       const collapsed = _collapsedIds.has(id);
       const today = new Date().toISOString().slice(0, 10);
       return {
-        id:            n.id,
-        title:         n.title,
-        status:        n.status,
-        priority:      n.priority,
-        color:         n.color,
-        overdue:       !!n.dueDate && n.dueDate < today && n.status !== "resolved",
+        id:             n.id,
+        title:          n.title,
+        status:         n.status,
+        priority:       n.priority,
+        color:          n.color,
+        nodeType:       n.nodeType       || null,
+        recurrenceType: n.recurrenceType || null,
+        overdue:        !!n.dueDate && n.dueDate < today && n.status !== "resolved",
         collapsed,
         hiddenChildCount: collapsed ? n.childIds.length : 0,
-        crossMapLinks: n.crossMapLinks || [],
-        relatedLinks:  n.relatedLinks  || [],
-        children:      collapsed ? [] : n.childIds.map(buildNode).filter(Boolean),
+        crossMapLinks:  n.crossMapLinks || [],
+        relatedLinks:   n.relatedLinks  || [],
+        children:       collapsed ? [] : n.childIds.map(buildNode).filter(Boolean),
       };
     }
     return buildNode(rootId);
@@ -227,7 +243,9 @@ const MindMap = (() => {
         const selected      = d.data.id === selectedId ? " selected" : "";
         const dimmed        = _dimmedIds.has(d.data.id) ? " dimmed" : "";
         const overdue       = d.data.overdue ? " overdue" : "";
-        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}`;
+        const calClass      = d.data.nodeType === "calendar" ? " node-calendar" : "";
+        const recurClass    = d.data.recurrenceType ? " node-recurring" : "";
+        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}${calClass}${recurClass}`;
       })
       .attr("r", d => d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2))
       .style("fill", d => d.data.color || null);
@@ -275,21 +293,43 @@ const MindMap = (() => {
       .attr("text-anchor", d => d._side === 'left' ? "end" : "start")
       .text(d => `+${d.data.hiddenChildCount}`);
 
-    // Hover "+" button — adds a child node on click
-    nodeG.append("text")
-      .attr("class", "node-add-btn")
-      .attr("dx", d => {
-        const r = d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2);
-        return d._side === 'left' ? -(r + 16) : (r + 16);
-      })
-      .attr("dy", 0)
+    // ── Floating add-child button (separate layer → always on top) ─────────────
+    const _addOverlay = g.append("g");
+    const _addBtnEl   = _addOverlay.append("text")
+      .attr("class", "node-add-btn-float")
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
-      .text("＋")
-      .on("click", (e, d) => {
+      .style("opacity", 0)
+      .style("pointer-events", "none")
+      .text("＋");
+    let _hoveredAddNode = null;
+    let _addHideTimer   = null;
+    function _schedAddHide() {
+      _addHideTimer = setTimeout(() => {
+        _addBtnEl.style("opacity", 0).style("pointer-events", "none");
+        _hoveredAddNode = null;
+      }, 120);
+    }
+    nodeG
+      .on("mouseenter.addbtn", (e, d) => {
+        if (_addHideTimer) { clearTimeout(_addHideTimer); _addHideTimer = null; }
+        _hoveredAddNode = d;
+        const r = d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2);
+        _addBtnEl
+          .attr("x", d.x_cart)
+          .attr("y", d.y_cart - (r + 13))
+          .style("opacity", 1)
+          .style("pointer-events", "all");
+      })
+      .on("mouseleave.addbtn", _schedAddHide);
+    _addBtnEl
+      .on("mouseenter", () => { if (_addHideTimer) { clearTimeout(_addHideTimer); _addHideTimer = null; } })
+      .on("mouseleave", _schedAddHide)
+      .on("click", e => {
         e.stopPropagation();
+        if (!_hoveredAddNode) return;
         ContextMenu.hide();
-        const newId = State.addNode(d.data.id, Settings.getDefaultNodeText());
+        const newId = State.addNode(_hoveredAddNode.data.id, Settings.getDefaultNodeText());
         Detail.open(newId);
         setTimeout(() => Detail.focusTitleInput(), 30);
       });

@@ -119,6 +119,7 @@ const Agenda = (() => {
       Object.values(nodes).forEach(node => {
         if (node.id === rootId) return;
         if (node.status === "resolved") return;
+        if (node.hiddenUntil && new Date(node.hiddenUntil) > new Date()) return;
         const hasStatus = !!node.status;
         const hasDue    = !!node.dueDate;
         if (!hasStatus && !hasDue) return;
@@ -145,6 +146,7 @@ const Agenda = (() => {
     order.forEach((id, idx) => {
       const todo = todoMap[id];
       if (!todo) return;
+      if (todo.done) return; // completed todos don't appear in agenda
       const sd = todo.dueDate ? new Date(todo.dueDate + "T00:00:00") : null;
       items.push({
         type:      "todo",

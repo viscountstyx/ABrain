@@ -391,6 +391,20 @@ const ContextMenu = (() => {
     hide();
   });
 
+  document.getElementById("ctx-add-calendar").addEventListener("click", () => {
+    const id = State.getSelectedId();
+    if (id) {
+      const now   = new Date();
+      const start = now.toISOString().slice(0, 16);
+      const end   = new Date(now.getTime() + 3_600_000).toISOString().slice(0, 16);
+      const newId = State.addNode(id, "New event");
+      State.updateNode(newId, { nodeType: "calendar", calStart: start, calEnd: end });
+      Detail.open(newId);
+      setTimeout(() => Detail.focusTitleInput(), 30);
+    }
+    hide();
+  });
+
   document.getElementById("ctx-delete").addEventListener("click", () => {
     const node = State.getSelectedNode();
     if (!node || node.id === State.getRootNodeId()) { hide(); return; }

@@ -258,6 +258,39 @@
           <button id="btn-add-relatedlink">＋ Relate to a node on this map</button>
         </div>
 
+        <div class="field-group hidden" id="detail-calendar-fields">
+          <label>Calendar event</label>
+          <div class="cal-datetime-row">
+            <span class="cal-sub-label">Start</span>
+            <input id="detail-cal-start" type="datetime-local" />
+          </div>
+          <div class="cal-datetime-row">
+            <span class="cal-sub-label">End</span>
+            <input id="detail-cal-end" type="datetime-local" />
+          </div>
+          <p class="field-hint">Disappears from the map after the end time.</p>
+        </div>
+
+        <div class="field-group">
+          <label>Recurrence</label>
+          <select id="detail-recur-type">
+            <option value="">No recurrence</option>
+            <option value="fixed">Fixed schedule</option>
+            <option value="completion">Offset from completion</option>
+          </select>
+          <div id="detail-recur-interval-row" class="recur-interval-row hidden">
+            <span class="cal-sub-label">Every</span>
+            <input id="detail-recur-interval" type="number" min="1" max="999" value="1" />
+            <select id="detail-recur-unit">
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+              <option value="weeks">weeks</option>
+              <option value="months">months</option>
+            </select>
+          </div>
+          <p id="detail-recur-hint" class="field-hint hidden">On completion, this node hides until the next instance is due.</p>
+        </div>
+
       </div>
       <div class="modal-footer">
         <button id="btn-done-node">Done</button>
@@ -526,6 +559,7 @@
     <ul>
       <li id="ctx-add-child">Add Child</li>
       <li id="ctx-add-sibling">Add Sibling</li>
+      <li id="ctx-add-calendar">📅 Add Calendar Event</li>
       <li id="ctx-add-jira">Add Jira Issue…</li>
       <li class="ctx-sep"></li>
       <li id="ctx-add-crosslink">Link to Another Map…</li>

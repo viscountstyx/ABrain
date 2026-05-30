@@ -56,6 +56,18 @@ const State = (() => {
     return false;
   }
 
+  function _addInterval(base, interval, unit) {
+    const d = new Date(base);
+    const n = parseInt(interval, 10) || 1;
+    switch (unit) {
+      case "hours":  d.setHours(d.getHours() + n);   break;
+      case "weeks":  d.setDate(d.getDate() + n * 7);  break;
+      case "months": d.setMonth(d.getMonth() + n);    break;
+      default:       d.setDate(d.getDate() + n);
+    }
+    return d;
+  }
+
   // ── Load / snapshot ──────────────────────────────────────────────────
 
   function load(mapData) {
@@ -72,8 +84,15 @@ const State = (() => {
       _nodes[id].childIds      = [...(raw[id].childIds || [])];
       _nodes[id].tags          = [...(raw[id].tags || [])];
       _nodes[id].attachments   = (raw[id].attachments || []).map(a => Object.assign({}, a));
-      _nodes[id].crossMapLinks = (raw[id].crossMapLinks || []).map(l => Object.assign({}, l));
-      _nodes[id].relatedLinks  = (raw[id].relatedLinks  || []).map(l => Object.assign({}, l));
+      _nodes[id].crossMapLinks      = (raw[id].crossMapLinks || []).map(l => Object.assign({}, l));
+      _nodes[id].relatedLinks       = (raw[id].relatedLinks  || []).map(l => Object.assign({}, l));
+      _nodes[id].nodeType           = raw[id].nodeType           || null;
+      _nodes[id].calStart           = raw[id].calStart           || null;
+      _nodes[id].calEnd             = raw[id].calEnd             || null;
+      _nodes[id].recurrenceType     = raw[id].recurrenceType     || null;
+      _nodes[id].recurrenceInterval = raw[id].recurrenceInterval || null;
+      _nodes[id].recurrenceUnit     = raw[id].recurrenceUnit     || null;
+      _nodes[id].hiddenUntil        = raw[id].hiddenUntil        || null;
     }
     _selectedNodeId = null;
     _notify();
@@ -96,7 +115,14 @@ const State = (() => {
         priority:      n.priority,
         attachments:   n.attachments.map(a => Object.assign({}, a)),
         crossMapLinks: n.crossMapLinks.map(l => Object.assign({}, l)),
-        relatedLinks:   (n.relatedLinks || []).map(l => Object.assign({}, l)),
+        relatedLinks:        (n.relatedLinks || []).map(l => Object.assign({}, l)),
+        nodeType:             n.nodeType            || null,
+        calStart:             n.calStart            || null,
+        calEnd:               n.calEnd              || null,
+        recurrenceType:       n.recurrenceType      || null,
+        recurrenceInterval:   n.recurrenceInterval  || null,
+        recurrenceUnit:       n.recurrenceUnit      || null,
+        hiddenUntil:          n.hiddenUntil         || null,
         color:         n.color || null,
         createdAt:     n.createdAt,
         updatedAt:     n.updatedAt,
@@ -152,8 +178,15 @@ const State = (() => {
       dueDate:       null,
       priority:      null,
       attachments:   [],
-      crossMapLinks: [],
-      relatedLinks:  [],
+      crossMapLinks:       [],
+      relatedLinks:        [],
+      nodeType:            null,
+      calStart:            null,
+      calEnd:              null,
+      recurrenceType:      null,
+      recurrenceInterval:  null,
+      recurrenceUnit:      null,
+      hiddenUntil:         null,
       createdAt:     now,
       updatedAt:     now,
     };
@@ -168,7 +201,24 @@ const State = (() => {
 
   function updateNode(id, patch) {
     if (!_nodes[id]) return;
-    Object.assign(_nodes[id], patch, { updatedAt: _now() });
+    const node = _nodes[id];
+    // Handle recurring node completion: hide until next instance is due
+    if (patch.status === "resolved" && node.recurrenceType) {
+      const now  = new Date();
+      const base = node.recurrenceType === "completion"
+        ? now
+        : (node.dueDate ? new Date(node.dueDate + "T00:00:00") : now);
+      const next = _addInterval(base, node.recurrenceInterval || 1, node.recurrenceUnit || "days");
+      Object.assign(node, {
+        status:      null,
+        hiddenUntil: next.toISOString(),
+        dueDate:     next.toISOString().slice(0, 10),
+        updatedAt:   _now(),
+      });
+      _notify();
+      return;
+    }
+    Object.assign(node, patch, { updatedAt: _now() });
     _notify();
   }
 
@@ -242,8 +292,15 @@ const State = (() => {
       tags:          [...(src.tags || [])],
       dueDate:       src.dueDate || null,
       attachments:   JSON.parse(JSON.stringify(src.attachments || [])),
-      crossMapLinks: [],
-      relatedLinks:  [],
+      crossMapLinks:       [],
+      relatedLinks:        [],
+      nodeType:            src.nodeType            || null,
+      calStart:            src.calStart            || null,
+      calEnd:              src.calEnd              || null,
+      recurrenceType:      src.recurrenceType      || null,
+      recurrenceInterval:  src.recurrenceInterval  || null,
+      recurrenceUnit:      src.recurrenceUnit      || null,
+      hiddenUntil:         null,
       createdAt:     now,
       updatedAt:     now,
     };

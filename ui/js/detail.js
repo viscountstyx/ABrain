@@ -113,6 +113,20 @@ const Detail = (() => {
     _renderCrossLinks(node.crossMapLinks || []);
     _renderRelatedLinks(node.relatedLinks || []);
 
+    // Calendar event fields
+    const isCalendar = node.nodeType === "calendar";
+    document.getElementById("detail-calendar-fields").classList.toggle("hidden", !isCalendar);
+    document.getElementById("detail-cal-start").value = isCalendar && node.calStart ? node.calStart.slice(0, 16) : "";
+    document.getElementById("detail-cal-end").value   = isCalendar && node.calEnd   ? node.calEnd.slice(0, 16)   : "";
+
+    // Recurrence fields
+    const recurType = node.recurrenceType || "";
+    document.getElementById("detail-recur-type").value     = recurType;
+    document.getElementById("detail-recur-interval").value = node.recurrenceInterval || 1;
+    document.getElementById("detail-recur-unit").value     = node.recurrenceUnit || "days";
+    document.getElementById("detail-recur-interval-row").classList.toggle("hidden", !recurType);
+    document.getElementById("detail-recur-hint").classList.toggle("hidden", !recurType);
+
     _suppressUpdate = false;
   }
 
@@ -603,6 +617,34 @@ const Detail = (() => {
 
     document.getElementById("btn-done-node").addEventListener("click", () => {
       State.deselectNode();
+    });
+
+    // Calendar event fields
+    document.getElementById("detail-cal-start").addEventListener("change", () => {
+      if (_suppressUpdate || !_currentId) return;
+      State.updateNode(_currentId, { calStart: document.getElementById("detail-cal-start").value || null });
+    });
+    document.getElementById("detail-cal-end").addEventListener("change", () => {
+      if (_suppressUpdate || !_currentId) return;
+      State.updateNode(_currentId, { calEnd: document.getElementById("detail-cal-end").value || null });
+    });
+
+    // Recurrence fields
+    document.getElementById("detail-recur-type").addEventListener("change", () => {
+      if (_suppressUpdate || !_currentId) return;
+      const val = document.getElementById("detail-recur-type").value || null;
+      State.updateNode(_currentId, { recurrenceType: val });
+      document.getElementById("detail-recur-interval-row").classList.toggle("hidden", !val);
+      document.getElementById("detail-recur-hint").classList.toggle("hidden", !val);
+    });
+    document.getElementById("detail-recur-interval").addEventListener("change", () => {
+      if (_suppressUpdate || !_currentId) return;
+      const val = parseInt(document.getElementById("detail-recur-interval").value, 10);
+      State.updateNode(_currentId, { recurrenceInterval: isNaN(val) ? 1 : Math.max(1, val) });
+    });
+    document.getElementById("detail-recur-unit").addEventListener("change", () => {
+      if (_suppressUpdate || !_currentId) return;
+      State.updateNode(_currentId, { recurrenceUnit: document.getElementById("detail-recur-unit").value });
     });
   }
 

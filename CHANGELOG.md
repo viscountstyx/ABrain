@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-05-30
+
+### Added
+- **Calendar event nodes** — right-click any node and choose "Add Calendar Event" to create a child node with a start and end datetime; the node automatically disappears from the map once the end time passes
+- **Recurring task nodes** — any map node can now have a recurrence setting ("Fixed schedule" or "Offset from completion", with any interval in hours / days / weeks / months); marking such a node resolved hides it until the next instance is due, then it reappears automatically
+- Recurrence and calendar fields are shown in the node detail panel when relevant
+
+### Fixed
+- Hover `＋` add-child button no longer renders behind sibling label text; it is now drawn in a separate SVG layer above all nodes
+- Completed todos no longer appear in the agenda
+- Recurring map nodes that are waiting for their next instance no longer appear in the agenda
+
 ## [1.2.6] - 2026-05-30
 
 ### Added
