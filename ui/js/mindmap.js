@@ -15,6 +15,7 @@ const MindMap = (() => {
   let _dimmedIds   = new Set(); // node IDs to dim (from search/filter)
   let _highlightId = null;      // node to pan to
   let _collapsedIds = new Set(); // node IDs whose children are hidden
+  let _showHidden  = false;      // when true, manually-hidden resolved nodes are shown
 
   const COLLAPSED_KEY = "abrain-collapsed";
 
@@ -136,6 +137,8 @@ const MindMap = (() => {
       if (n.nodeType === "calendar" && n.calEnd && new Date(n.calEnd) < new Date()) return null;
       // Skip recurring nodes waiting for their next instance
       if (n.hiddenUntil && new Date(n.hiddenUntil) > new Date()) return null;
+      // Skip manually-hidden nodes unless "show hidden" is active
+      if (n.manuallyHidden && !_showHidden) return null;
       const collapsed = _collapsedIds.has(id);
       const today = new Date().toISOString().slice(0, 10);
       return {
@@ -146,6 +149,7 @@ const MindMap = (() => {
         color:          n.color,
         nodeType:       n.nodeType       || null,
         recurrenceType: n.recurrenceType || null,
+        manuallyHidden: n.manuallyHidden || null,
         overdue:        !!n.dueDate && n.dueDate < today && n.status !== "resolved",
         collapsed,
         hiddenChildCount: collapsed ? n.childIds.length : 0,
@@ -245,7 +249,8 @@ const MindMap = (() => {
         const overdue       = d.data.overdue ? " overdue" : "";
         const calClass      = d.data.nodeType === "calendar" ? " node-calendar" : "";
         const recurClass    = d.data.recurrenceType ? " node-recurring" : "";
-        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}${calClass}${recurClass}`;
+        const hiddenClass   = d.data.manuallyHidden ? " node-manually-hidden" : "";
+        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}${calClass}${recurClass}${hiddenClass}`;
       })
       .attr("r", d => d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2))
       .style("fill", d => d.data.color || null);
@@ -253,9 +258,10 @@ const MindMap = (() => {
     // Labels
     nodeG.append("text")
       .attr("class", d => {
-        const dimmed   = _dimmedIds.has(d.data.id) ? " dimmed" : "";
-        const selected = d.data.id === selectedId ? " selected" : "";
-        return "node-label" + dimmed + selected;
+        const dimmed      = _dimmedIds.has(d.data.id) ? " dimmed" : "";
+        const selected    = d.data.id === selectedId ? " selected" : "";
+        const hiddenClass = d.data.manuallyHidden ? " node-manually-hidden" : "";
+        return "node-label" + dimmed + selected + hiddenClass;
       })
       .attr("text-anchor", d => {
         if (d.depth === 0) return "middle";
@@ -591,7 +597,16 @@ const MindMap = (() => {
     render();
   }
 
-  return { init, render, focusNode, fitToScreen, setDimmed };
+  function setShowHidden(val) {
+    _showHidden = !!val;
+    render();
+  }
+
+  function getShowHidden() {
+    return _showHidden;
+  }
+
+  return { init, render, focusNode, fitToScreen, setDimmed, setShowHidden, getShowHidden };
 })();
 
 // ── Initialise once DOM is ready (called after bridge bootstraps state) ──

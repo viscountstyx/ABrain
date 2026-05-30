@@ -93,6 +93,7 @@ const State = (() => {
       _nodes[id].recurrenceInterval = raw[id].recurrenceInterval || null;
       _nodes[id].recurrenceUnit     = raw[id].recurrenceUnit     || null;
       _nodes[id].hiddenUntil        = raw[id].hiddenUntil        || null;
+      _nodes[id].manuallyHidden     = raw[id].manuallyHidden     || null;
     }
     _selectedNodeId = null;
     _notify();
@@ -123,6 +124,7 @@ const State = (() => {
         recurrenceInterval:   n.recurrenceInterval  || null,
         recurrenceUnit:       n.recurrenceUnit      || null,
         hiddenUntil:          n.hiddenUntil         || null,
+        manuallyHidden:       n.manuallyHidden      || null,
         color:         n.color || null,
         createdAt:     n.createdAt,
         updatedAt:     n.updatedAt,
@@ -187,6 +189,7 @@ const State = (() => {
       recurrenceInterval:  null,
       recurrenceUnit:      null,
       hiddenUntil:         null,
+      manuallyHidden:      null,
       createdAt:     now,
       updatedAt:     now,
     };
@@ -301,6 +304,7 @@ const State = (() => {
       recurrenceInterval:  src.recurrenceInterval  || null,
       recurrenceUnit:      src.recurrenceUnit      || null,
       hiddenUntil:         null,
+      manuallyHidden:      null,
       createdAt:     now,
       updatedAt:     now,
     };

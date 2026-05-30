@@ -102,6 +102,16 @@ const Detail = (() => {
       }
     }
 
+    // Hide/unhide buttons: hide button for resolved non-recurring; unhide for already-hidden
+    const hideBtn   = document.getElementById("btn-hide-node");
+    const unhideBtn = document.getElementById("btn-unhide-node");
+    if (hideBtn && unhideBtn) {
+      const isResolved  = node.status === "resolved";
+      const isRecurring = !!node.recurrenceType;
+      hideBtn.classList.toggle("hidden",   !!node.manuallyHidden || !isResolved || isRecurring);
+      unhideBtn.classList.toggle("hidden", !node.manuallyHidden);
+    }
+
     // Status buttons
     statusBtns().forEach(btn => {
       const s = btn.dataset.status;
@@ -611,6 +621,17 @@ const Detail = (() => {
         State.updateNode(_currentId, { status: newStatus });
         statusBtns().forEach(b => b.classList.toggle("active", b.dataset.status === btn.dataset.status));
       });
+    });
+
+    document.getElementById("btn-hide-node").addEventListener("click", () => {
+      if (!_currentId) return;
+      State.updateNode(_currentId, { manuallyHidden: true });
+      State.deselectNode();
+    });
+
+    document.getElementById("btn-unhide-node").addEventListener("click", () => {
+      if (!_currentId) return;
+      State.updateNode(_currentId, { manuallyHidden: null });
     });
 
     document.getElementById("btn-close-detail").addEventListener("click", () => {

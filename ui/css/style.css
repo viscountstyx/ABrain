@@ -310,6 +310,8 @@ select { width: 100%; }
   font-size: 13px;
 }
 .tool-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+.tool-btn--active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.tool-btn--active:hover { background: var(--accent-dim); color: var(--accent); }
 .toolbar-sep { flex: 1; }
 
 #mindmap-svg {
@@ -366,6 +368,7 @@ select { width: 100%; }
 }
 .node-label.dimmed   { opacity: 0.1; }
 .node-label.selected { opacity: 1; }
+.node-label.node-manually-hidden { opacity: 0.35; }
 .node-group:hover .node-label { opacity: 1; }
 
 .collapse-badge {
@@ -407,6 +410,13 @@ select { width: 100%; }
 .node-circle.node-recurring {
   stroke: var(--node-started);
   stroke-width: 2;
+}
+/* Manually hidden nodes (shown only in "show hidden" mode) */
+.node-circle.node-manually-hidden {
+  opacity: 0.35;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
 }
 
 /* Related links (same-map lateral connections) */

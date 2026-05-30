@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.9] - 2026-05-30
+
+### Added
+- Resolved (non-recurring) nodes in the detail panel now show a **"Hide node from map"** button; clicking it removes the node from the map view without deleting it
+- Hidden nodes can be **revealed** by toggling the new "👁 Hidden" button in the toolbar, which shows all manually-hidden nodes in a faded/dashed style
+- While a hidden node is visible (show-hidden mode active), its detail panel shows an **"↩ Unhide node"** button to restore it to the map permanently
+
 ## [1.3.8] - 2026-05-30
 
 ### Added

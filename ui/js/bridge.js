@@ -80,6 +80,7 @@ const Bridge = (() => {
 
     _wireExportButtons();
     _wireKeyboardShortcuts();
+    _wireShowHiddenToggle();
   }
 
   // ── Export buttons ────────────────────────────────────────────────────
@@ -124,6 +125,19 @@ const Bridge = (() => {
         await window.pywebview.api.export_png(result.path, b64);
       };
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
+    });
+  }
+
+  // ── Show hidden nodes toggle ─────────────────────────────────────────
+
+  function _wireShowHiddenToggle() {
+    const btn = document.getElementById("btn-show-hidden");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const nowActive = !MindMap.getShowHidden();
+      MindMap.setShowHidden(nowActive);
+      btn.classList.toggle("tool-btn--active", nowActive);
+      btn.title = nowActive ? "Hide hidden nodes" : "Show hidden nodes";
     });
   }
 
