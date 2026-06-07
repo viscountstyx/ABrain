@@ -96,6 +96,13 @@ const Settings = (() => {
     document.getElementById("settings-int-jira-token").value    = jira.token    || "";
     document.getElementById("settings-int-cal-url").value       = cal.icsUrl    || "";
     document.getElementById("settings-int-cal-days").value      = String(cal.lookaheadDays ?? 7);
+
+    // Dropbox
+    const dbx = _config.dropbox || {};
+    document.getElementById("settings-int-dbx-key").value    = dbx.appKey    || "";
+    document.getElementById("settings-int-dbx-secret").value = dbx.appSecret || "";
+    document.getElementById("settings-int-dbx-code").value   = "";
+    _updateDropboxStatus();
   }
 
   // ── Tab switching ─────────────────────────────────────────────────────
@@ -349,6 +356,8 @@ const Settings = (() => {
         lookaheadDays: parseInt(document.getElementById("settings-int-cal-days").value, 10),
         email:         ((_config || {}).calendar || {}).email || "",
       },
+      // dropbox block preserved as-is from _config; mutations happen through
+      // dropbox_connect / dropbox_disconnect / dropbox_upload / dropbox_download
     };
 
     await window.pywebview.api.save_config(updated);
@@ -356,6 +365,50 @@ const Settings = (() => {
     applyUiSettings(ui);
     if (typeof MindMap !== "undefined") MindMap.render();
     close();
+  }
+
+  // ── Dropbox status helpers ────────────────────────────────────────────
+
+  function _updateDropboxStatus() {
+    const dbx       = (_config || {}).dropbox || {};
+    const connected = !!(dbx.refreshToken);
+
+    const statusEl  = document.getElementById("dbx-status");
+    const lastEl    = document.getElementById("dbx-last-sync");
+    const lastRow   = document.getElementById("dbx-last-sync-row");
+    const setupRows = document.getElementById("dbx-setup-rows");
+    const codeRow   = document.getElementById("dbx-code-row");
+
+    statusEl.textContent = connected ? "Connected" : "Not connected";
+    statusEl.className   = `dbx-status ${connected ? "dbx-status--on" : "dbx-status--off"}`;
+
+    if (dbx.lastSyncAt) {
+      lastEl.textContent = new Date(dbx.lastSyncAt).toLocaleString();
+      lastRow.classList.remove("hidden");
+    } else {
+      lastRow.classList.add("hidden");
+    }
+
+    // Hide setup rows (key/secret/code) once connected
+    setupRows.classList.toggle("hidden", connected);
+    codeRow.classList.add("hidden");
+
+    document.getElementById("btn-dbx-auth").classList.toggle("hidden", connected);
+    document.getElementById("btn-dbx-connect").classList.add("hidden");
+    document.getElementById("btn-dbx-upload").classList.toggle("hidden", !connected);
+    document.getElementById("btn-dbx-download").classList.toggle("hidden", !connected);
+    document.getElementById("btn-dbx-disconnect").classList.toggle("hidden", !connected);
+  }
+
+  function _setDbxFeedback(msg, isError = false) {
+    const el = document.getElementById("dbx-feedback");
+    el.textContent = msg;
+    el.className = isError
+      ? "settings-feedback settings-feedback--error"
+      : "settings-feedback";
+    if (!isError) {
+      setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 6000);
+    }
   }
 
   // ── Wire UI ───────────────────────────────────────────────────────────
@@ -412,6 +465,80 @@ const Settings = (() => {
 
     document.getElementById("btn-open-data-dir").addEventListener("click", async () => {
       await window.pywebview.api.open_data_dir();
+    });
+
+    // Dropbox: open developer apps page
+    document.getElementById("dbx-dev-link").addEventListener("click", e => {
+      e.preventDefault();
+      window.pywebview.api.open_url("https://www.dropbox.com/developers/apps");
+    });
+
+    // Dropbox: step 1 — get the auth URL and open it
+    document.getElementById("btn-dbx-auth").addEventListener("click", async () => {
+      const key = document.getElementById("settings-int-dbx-key").value.trim();
+      if (!key) { _setDbxFeedback("Enter your App key first.", true); return; }
+      const result = await window.pywebview.api.dropbox_get_auth_url(key);
+      if (result.error) { _setDbxFeedback(result.error, true); return; }
+      window.pywebview.api.open_url(result.url);
+      document.getElementById("dbx-code-row").classList.remove("hidden");
+      document.getElementById("btn-dbx-connect").classList.remove("hidden");
+      document.getElementById("btn-dbx-auth").classList.add("hidden");
+      _setDbxFeedback("Authorization page opened in your browser. Authorize the app, copy the code shown, paste it above, then click Connect.");
+    });
+
+    // Dropbox: step 2 — exchange code for tokens
+    document.getElementById("btn-dbx-connect").addEventListener("click", async () => {
+      const key    = document.getElementById("settings-int-dbx-key").value.trim();
+      const secret = document.getElementById("settings-int-dbx-secret").value.trim();
+      const code   = document.getElementById("settings-int-dbx-code").value.trim();
+      const btn    = document.getElementById("btn-dbx-connect");
+      btn.disabled = true;
+      btn.textContent = "Connecting…";
+      const result = await window.pywebview.api.dropbox_connect(key, secret, code);
+      btn.disabled = false;
+      btn.textContent = "Connect";
+      if (!result.ok) { _setDbxFeedback(result.error || "Connection failed.", true); return; }
+      _config = await window.pywebview.api.load_config();
+      _updateDropboxStatus();
+      _setDbxFeedback("Connected to Dropbox.");
+    });
+
+    // Dropbox: upload
+    document.getElementById("btn-dbx-upload").addEventListener("click", async () => {
+      const btn = document.getElementById("btn-dbx-upload");
+      btn.disabled = true;
+      btn.textContent = "Uploading…";
+      const result = await window.pywebview.api.dropbox_upload();
+      btn.disabled = false;
+      btn.textContent = "Upload to Dropbox";
+      if (!result.ok) { _setDbxFeedback(result.error || "Upload failed.", true); return; }
+      _config = await window.pywebview.api.load_config();
+      _updateDropboxStatus();
+      _setDbxFeedback(`Uploaded ${result.uploaded} file${result.uploaded !== 1 ? "s" : ""} to Dropbox.`);
+    });
+
+    // Dropbox: download
+    document.getElementById("btn-dbx-download").addEventListener("click", async () => {
+      if (!confirm("Download from Dropbox?\n\nThis will overwrite your local maps, tasks, and config with the Dropbox versions.")) return;
+      const btn = document.getElementById("btn-dbx-download");
+      btn.disabled = true;
+      btn.textContent = "Downloading…";
+      const result = await window.pywebview.api.dropbox_download();
+      btn.disabled = false;
+      btn.textContent = "Download from Dropbox";
+      if (!result.ok) { _setDbxFeedback(result.error || "Download failed.", true); return; }
+      _config = await window.pywebview.api.load_config();
+      _updateDropboxStatus();
+      _setDbxFeedback(`Downloaded ${result.downloaded} file${result.downloaded !== 1 ? "s" : ""}. Restart ABrain to reload all data.`);
+    });
+
+    // Dropbox: disconnect
+    document.getElementById("btn-dbx-disconnect").addEventListener("click", async () => {
+      if (!confirm("Disconnect Dropbox?\n\nThis removes your stored credentials. Your Dropbox files are not deleted.")) return;
+      await window.pywebview.api.dropbox_disconnect();
+      _config = await window.pywebview.api.load_config();
+      _updateDropboxStatus();
+      _setDbxFeedback("Disconnected from Dropbox.");
     });
   }
 

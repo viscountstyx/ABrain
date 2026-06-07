@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1] - 2026-06-07
+
+### Fixed
+- Dropbox upload and download now work correctly — Python's `urllib.request` was silently lowercasing the `Dropbox-API-Arg` header name, causing Dropbox to reject every request with HTTP 400. Switched to `http.client` directly which preserves header name casing exactly
+- Error messages from failed Dropbox requests now include the actual Dropbox error detail rather than just "HTTP 400: Bad Request"
+
+## [1.4.0] - 2026-06-07
+
+### Added
+- **Dropbox Sync** integration in Settings → Integrations: connect ABrain to a Dropbox developer app using OAuth2 and upload or download all your maps, tasks, and config as a backup/restore operation
+- "Upload to Dropbox" pushes every local JSON data file to a `/ABrain/` folder in your Dropbox
+- "Download from Dropbox" pulls those files back and overwrites local data (with confirmation prompt)
+- "Last synced" timestamp shown in the Integrations panel after each successful sync
+- One-click link to the Dropbox developer console directly from the settings panel
+
+## [1.3.10] - 2026-05-30
+
+### Added
+- The **"👁 Hidden" toolbar toggle** now also reveals recurring tasks that are waiting for their next occurrence (previously they were completely inaccessible once completed)
+- Waiting recurring nodes appear on the map in a dashed blue-tinted style to distinguish them from manually-hidden nodes
+- Opening a waiting recurring node shows an **"Undo completion — show now"** button in the detail panel; clicking it clears `hiddenUntil` and makes the task immediately visible again
+
 ## [1.3.9] - 2026-05-30
 
 ### Added

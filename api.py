@@ -1,10 +1,13 @@
 import base64
+import http.client
 import json
 import os
+import ssl
 import subprocess
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 import webbrowser
@@ -736,6 +739,238 @@ class Api:
                 _atomic_write(map_path, map_data)
 
         return {"fixed": fixed}
+
+    # ------------------------------------------------------------------
+    # Dropbox sync
+    # ------------------------------------------------------------------
+
+    def _dropbox_post(self, host: str, path: str, headers: dict, body: bytes | None = None, timeout: int = 30) -> tuple[int, bytes]:
+        """Low-level HTTPS POST that preserves header name casing exactly."""
+        ctx  = ssl.create_default_context()
+        conn = http.client.HTTPSConnection(host, context=ctx, timeout=timeout)
+        try:
+            conn.request("POST", path, body=body, headers=headers)
+            resp = conn.getresponse()
+            data = resp.read()
+            return resp.status, data
+        finally:
+            conn.close()
+
+    def _dropbox_get_access_token(self, app_key: str, app_secret: str, refresh_token: str) -> str:
+        """Exchange a Dropbox refresh token for a short-lived access token."""
+        data = urllib.parse.urlencode({
+            "grant_type":    "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id":     app_key,
+            "client_secret": app_secret,
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.dropbox.com/oauth2/token",
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read().decode())
+        return result["access_token"]
+
+    def dropbox_get_auth_url(self, app_key: str) -> dict:
+        """Return the Dropbox OAuth2 authorization URL for the given app key."""
+        if not app_key:
+            return {"error": "App key is required"}
+        url = (
+            "https://www.dropbox.com/oauth2/authorize"
+            f"?client_id={urllib.parse.quote(app_key)}"
+            "&response_type=code"
+            "&token_access_type=offline"
+        )
+        return {"url": url}
+
+    def dropbox_connect(self, app_key: str, app_secret: str, code: str) -> dict:
+        """Exchange an OAuth2 authorization code for tokens and save them to config."""
+        if not (app_key and app_secret and code):
+            return {"ok": False, "error": "App key, app secret, and authorization code are all required"}
+        data = urllib.parse.urlencode({
+            "code":          code.strip(),
+            "grant_type":    "authorization_code",
+            "client_id":     app_key,
+            "client_secret": app_secret,
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.dropbox.com/oauth2/token",
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            try:
+                body = json.loads(e.read().decode())
+                err = body.get("error_description") or body.get("error", f"HTTP {e.code}")
+            except Exception:
+                err = f"HTTP {e.code}"
+            return {"ok": False, "error": err}
+        except urllib.error.URLError as e:
+            return {"ok": False, "error": str(e.reason)}
+        refresh_token = result.get("refresh_token")
+        if not refresh_token:
+            return {"ok": False, "error": "No refresh token returned — ensure token_access_type=offline is set"}
+        config = self.load_config()
+        config["dropbox"] = {
+            "appKey":       app_key,
+            "appSecret":    app_secret,
+            "refreshToken": refresh_token,
+            "connectedAt":  _now(),
+            "lastSyncAt":   None,
+        }
+        self.save_config(config)
+        return {"ok": True}
+
+    def dropbox_disconnect(self) -> dict:
+        """Remove Dropbox credentials from config."""
+        config = self.load_config()
+        config.pop("dropbox", None)
+        self.save_config(config)
+        return {"ok": True}
+
+    def dropbox_upload(self) -> dict:
+        """Upload all local data JSON files to /ABrain/ in Dropbox."""
+        config = self.load_config()
+        dbx           = config.get("dropbox", {})
+        app_key       = dbx.get("appKey", "")
+        app_secret    = dbx.get("appSecret", "")
+        refresh_token = dbx.get("refreshToken", "")
+        if not (app_key and app_secret and refresh_token):
+            return {"ok": False, "error": "Dropbox not connected"}
+        try:
+            access_token = self._dropbox_get_access_token(app_key, app_secret, refresh_token)
+        except Exception as e:
+            return {"ok": False, "error": f"Token refresh failed: {e}"}
+        uploaded = 0
+        errors   = []
+        for fname in os.listdir(self._data_dir):
+            if not fname.endswith(".json"):
+                continue
+            local_path   = os.path.join(self._data_dir, fname)
+            dropbox_path = f"/ABrain/{fname}"
+            try:
+                with open(local_path, "rb") as f:
+                    file_data = f.read()
+                api_arg = json.dumps({
+                    "path":       dropbox_path,
+                    "mode":       {".tag": "overwrite"},
+                    "autorename": False,
+                    "mute":       True,
+                })
+                status, resp_bytes = self._dropbox_post(
+                    "content.dropboxapi.com",
+                    "/2/files/upload",
+                    headers={
+                        "Authorization":   f"Bearer {access_token}",
+                        "Content-Type":    "application/octet-stream",
+                        "Dropbox-API-Arg": api_arg,
+                    },
+                    body=file_data,
+                )
+                if status != 200:
+                    try:
+                        detail = json.loads(resp_bytes.decode()).get("error_summary", resp_bytes.decode()[:200])
+                    except Exception:
+                        detail = resp_bytes.decode(errors="replace")[:200]
+                    errors.append(f"{fname}: HTTP {status}: {detail}")
+                else:
+                    uploaded += 1
+            except Exception as e:
+                errors.append(f"{fname}: {e}")
+        if errors:
+            return {"ok": False, "error": "; ".join(errors), "uploaded": uploaded}
+        config["dropbox"]["lastSyncAt"] = _now()
+        self.save_config(config)
+        return {"ok": True, "uploaded": uploaded}
+
+    def dropbox_download(self) -> dict:
+        """Download all JSON files from /ABrain/ in Dropbox to the local data directory."""
+        config = self.load_config()
+        dbx           = config.get("dropbox", {})
+        app_key       = dbx.get("appKey", "")
+        app_secret    = dbx.get("appSecret", "")
+        refresh_token = dbx.get("refreshToken", "")
+        if not (app_key and app_secret and refresh_token):
+            return {"ok": False, "error": "Dropbox not connected"}
+        try:
+            access_token = self._dropbox_get_access_token(app_key, app_secret, refresh_token)
+        except Exception as e:
+            return {"ok": False, "error": f"Token refresh failed: {e}"}
+        # List the /ABrain folder
+        list_body = json.dumps({"path": "/ABrain", "recursive": False}).encode()
+        status, resp_bytes = self._dropbox_post(
+            "api.dropboxapi.com",
+            "/2/files/list_folder",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type":  "application/json",
+            },
+            body=list_body,
+        )
+        if status != 200:
+            try:
+                err_body = json.loads(resp_bytes.decode())
+                if "not_found" in str(err_body).lower():
+                    return {"ok": False, "error": "No /ABrain folder found in Dropbox. Upload first to create it."}
+                detail = err_body.get("error_summary", resp_bytes.decode()[:200])
+            except Exception:
+                detail = resp_bytes.decode(errors="replace")[:200]
+            return {"ok": False, "error": f"HTTP {status}: {detail}"}
+        listing = json.loads(resp_bytes.decode())
+        json_entries = [
+            e for e in listing.get("entries", [])
+            if e.get(".tag") == "file" and e.get("name", "").endswith(".json")
+        ]
+        downloaded = 0
+        errors     = []
+        for entry in json_entries:
+            dropbox_path = entry["path_display"]
+            fname        = entry["name"]
+            local_path   = os.path.join(self._data_dir, fname)
+            try:
+                status, file_data = self._dropbox_post(
+                    "content.dropboxapi.com",
+                    "/2/files/download",
+                    headers={
+                        "Authorization":   f"Bearer {access_token}",
+                        "Dropbox-API-Arg": json.dumps({"path": dropbox_path}),
+                    },
+                )
+                if status != 200:
+                    try:
+                        detail = json.loads(file_data.decode()).get("error_summary", file_data.decode()[:200])
+                    except Exception:
+                        detail = file_data.decode(errors="replace")[:200]
+                    errors.append(f"{fname}: HTTP {status}: {detail}")
+                    continue
+                # Validate JSON before writing to disk
+                json.loads(file_data.decode())
+                fd, tmp_path = tempfile.mkstemp(dir=self._data_dir, suffix=".tmp")
+                try:
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(file_data)
+                    os.replace(tmp_path, local_path)
+                except Exception:
+                    try:
+                        os.unlink(tmp_path)
+                    except OSError:
+                        pass
+                    raise
+                downloaded += 1
+            except Exception as e:
+                errors.append(f"{fname}: {e}")
+        if errors:
+            return {"ok": False, "error": "; ".join(errors), "downloaded": downloaded}
+        config["dropbox"]["lastSyncAt"] = _now()
+        self.save_config(config)
+        return {"ok": True, "downloaded": downloaded}
 
     def open_data_dir(self) -> dict:
         subprocess.Popen(["xdg-open", self._data_dir])

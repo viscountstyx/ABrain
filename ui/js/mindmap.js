@@ -135,8 +135,9 @@ const MindMap = (() => {
       if (!n) return null;
       // Skip expired calendar events
       if (n.nodeType === "calendar" && n.calEnd && new Date(n.calEnd) < new Date()) return null;
-      // Skip recurring nodes waiting for their next instance
-      if (n.hiddenUntil && new Date(n.hiddenUntil) > new Date()) return null;
+      // Skip recurring nodes waiting for their next instance (unless show-hidden is on)
+      const isWaiting = !!(n.hiddenUntil && new Date(n.hiddenUntil) > new Date());
+      if (isWaiting && !_showHidden) return null;
       // Skip manually-hidden nodes unless "show hidden" is active
       if (n.manuallyHidden && !_showHidden) return null;
       const collapsed = _collapsedIds.has(id);
@@ -150,6 +151,8 @@ const MindMap = (() => {
         nodeType:       n.nodeType       || null,
         recurrenceType: n.recurrenceType || null,
         manuallyHidden: n.manuallyHidden || null,
+        hiddenUntil:    n.hiddenUntil    || null,
+        isWaiting,
         overdue:        !!n.dueDate && n.dueDate < today && n.status !== "resolved",
         collapsed,
         hiddenChildCount: collapsed ? n.childIds.length : 0,
@@ -250,7 +253,8 @@ const MindMap = (() => {
         const calClass      = d.data.nodeType === "calendar" ? " node-calendar" : "";
         const recurClass    = d.data.recurrenceType ? " node-recurring" : "";
         const hiddenClass   = d.data.manuallyHidden ? " node-manually-hidden" : "";
-        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}${calClass}${recurClass}${hiddenClass}`;
+        const waitingClass  = d.data.isWaiting ? " node-hidden-until" : "";
+        return `node-circle ${statusClass}${priorityClass}${selected}${dimmed}${overdue}${calClass}${recurClass}${hiddenClass}${waitingClass}`;
       })
       .attr("r", d => d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2))
       .style("fill", d => d.data.color || null);
@@ -261,7 +265,8 @@ const MindMap = (() => {
         const dimmed      = _dimmedIds.has(d.data.id) ? " dimmed" : "";
         const selected    = d.data.id === selectedId ? " selected" : "";
         const hiddenClass = d.data.manuallyHidden ? " node-manually-hidden" : "";
-        return "node-label" + dimmed + selected + hiddenClass;
+        const waitingClass = d.data.isWaiting ? " node-hidden-until" : "";
+        return "node-label" + dimmed + selected + hiddenClass + waitingClass;
       })
       .attr("text-anchor", d => {
         if (d.depth === 0) return "middle";

@@ -139,6 +139,15 @@ const Detail = (() => {
       document.getElementById("detail-recur-unit").value     = node.recurrenceUnit || "days";
     }
 
+    // Waiting section: shown when a recurring node has been completed and is hiding
+    const isWaiting = !!(node.hiddenUntil && new Date(node.hiddenUntil) > new Date() && node.recurrenceType);
+    document.getElementById("detail-recur-waiting").classList.toggle("hidden", !isWaiting);
+    if (isWaiting) {
+      const d = new Date(node.hiddenUntil);
+      document.getElementById("detail-recur-next-date").textContent =
+        d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+    }
+
     _suppressUpdate = false;
   }
 
@@ -667,6 +676,11 @@ const Detail = (() => {
       document.getElementById("btn-add-recur").classList.remove("hidden");
       document.getElementById("detail-recur-controls").classList.add("hidden");
       State.updateNode(_currentId, { recurrenceType: null, recurrenceInterval: null, recurrenceUnit: null });
+    });
+
+    document.getElementById("btn-undo-recur-complete").addEventListener("click", () => {
+      if (!_currentId) return;
+      State.updateNode(_currentId, { hiddenUntil: null });
     });
     document.getElementById("detail-recur-type").addEventListener("change", () => {
       if (_suppressUpdate || !_currentId) return;

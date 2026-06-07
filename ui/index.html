@@ -248,6 +248,10 @@
               <p class="field-hint">On completion, this node hides until the next instance is due.</p>
               <button id="btn-remove-recur" class="btn-text-link">Remove recurrence</button>
             </div>
+            <div id="detail-recur-waiting" class="hidden">
+              <p class="field-hint">⏳ Waiting — next due <strong id="detail-recur-next-date"></strong></p>
+              <button id="btn-undo-recur-complete" class="btn-text-link">Undo completion — show now</button>
+            </div>
           </div>
 
           <div class="field-group hidden" id="detail-calendar-fields">
@@ -557,6 +561,55 @@
                 </select>
               </div>
             </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Dropbox Sync</div>
+            <p class="settings-description">Back up and restore your maps, tasks, and config to Dropbox. You need a <a id="dbx-dev-link" href="#">Dropbox developer app</a> — create one at dropbox.com/developers/apps (use &ldquo;App folder&rdquo; access), then copy its App key and App secret below.</p>
+
+            <!-- Pre-connection fields (hidden once connected) -->
+            <div id="dbx-setup-rows">
+              <div class="settings-row">
+                <label class="settings-label" for="settings-int-dbx-key">App key</label>
+                <div class="settings-control">
+                  <input id="settings-int-dbx-key" type="text" placeholder="xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+                </div>
+              </div>
+              <div class="settings-row">
+                <label class="settings-label" for="settings-int-dbx-secret">App secret</label>
+                <div class="settings-control">
+                  <input id="settings-int-dbx-secret" type="password" placeholder="xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+                </div>
+              </div>
+              <div id="dbx-code-row" class="settings-row hidden">
+                <label class="settings-label" for="settings-int-dbx-code">Authorization code</label>
+                <div class="settings-control">
+                  <input id="settings-int-dbx-code" type="text" placeholder="Paste the code shown by Dropbox…" autocomplete="off" />
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <label class="settings-label">Status</label>
+              <div class="settings-control">
+                <span id="dbx-status" class="dbx-status dbx-status--off">Not connected</span>
+              </div>
+            </div>
+            <div id="dbx-last-sync-row" class="settings-row hidden">
+              <label class="settings-label">Last synced</label>
+              <div class="settings-control">
+                <span id="dbx-last-sync"></span>
+              </div>
+            </div>
+
+            <div class="settings-action-row">
+              <button id="btn-dbx-auth"       class="settings-btn">Get authorization URL</button>
+              <button id="btn-dbx-connect"    class="settings-btn hidden">Connect</button>
+              <button id="btn-dbx-upload"     class="settings-btn hidden">Upload to Dropbox</button>
+              <button id="btn-dbx-download"   class="settings-btn hidden">Download from Dropbox</button>
+              <button id="btn-dbx-disconnect" class="settings-btn settings-btn--danger hidden">Disconnect</button>
+            </div>
+            <div id="dbx-feedback" class="settings-feedback"></div>
           </div>
         </div>
 
