@@ -13,7 +13,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve version
         id: version
@@ -43,7 +43,7 @@ jobs:
         run: ./build-deb.sh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: abrain-deb
           path: "*.deb"
