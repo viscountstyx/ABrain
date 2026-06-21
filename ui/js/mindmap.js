@@ -16,6 +16,7 @@ const MindMap = (() => {
   let _highlightId = null;      // node to pan to
   let _collapsedIds = new Set(); // node IDs whose children are hidden
   let _showHidden  = false;      // when true, manually-hidden resolved nodes are shown
+  let _lastMapId   = null;       // detect map changes for auto-fit
 
   const COLLAPSED_KEY = "abrain-collapsed";
 
@@ -182,11 +183,36 @@ const MindMap = (() => {
 
     const root = d3.hierarchy(hierarchyData);
 
+    // Auto-fit when the active map changes
+    const currentMapId = State.getMapId();
+    const mapChanged = currentMapId !== _lastMapId;
+    _lastMapId = currentMapId;
+
     // ── Bilateral mind-map layout ─────────────────────────────────────
-    // Split root's children into right (first half) and left (second half)
-    // so the map fans symmetrically from the centre like a traditional mind map.
+
+    // Helper: count leaf nodes reachable from a d3 hierarchy node.
+    // Collapsed nodes have no children in the hierarchy, so they count as 1.
+    function _subtreeLeaves(node) {
+      if (!node.children || node.children.length === 0) return 1;
+      return node.children.reduce((s, c) => s + _subtreeLeaves(c), 0);
+    }
+
     const allChildren = root.children || [];
-    const nRight = Math.ceil(allChildren.length / 2);
+
+    // Weight-balanced bilateral split: scan every possible split index
+    // (preserving insertion order) and pick the one that minimises the
+    // difference in leaf count between the two arms.
+    let nRight = Math.ceil(allChildren.length / 2);
+    if (allChildren.length > 1) {
+      const weights  = allChildren.map(c => _subtreeLeaves(c));
+      const total    = weights.reduce((a, b) => a + b, 0);
+      let bestDiff   = Infinity, cumLeft = 0;
+      for (let i = 1; i < allChildren.length; i++) {
+        cumLeft += weights[i - 1];
+        const diff = Math.abs(cumLeft - (total - cumLeft));
+        if (diff < bestDiff) { bestDiff = diff; nRight = i; }
+      }
+    }
 
     function _tagSide(node, side) {
       node._side = side;
@@ -196,22 +222,39 @@ const MindMap = (() => {
     allChildren.slice(0, nRight).forEach(c => _tagSide(c, 'right'));
     allChildren.slice(nRight).forEach(c => _tagSide(c, 'left'));
 
-    // nodeSize gives each node a fixed vertical slot → no crowding
-    const V_SPACING = 52;   // vertical gap between sibling rows (px)
-    const H_SPACING = 170;  // horizontal distance per depth level (px)
+    // V_SPACING: base it on the heavier arm's leaf count, not the total.
+    // With per-arm centering (below) the visible height is maxArmLeaves×VS,
+    // so that is the quantity that must fit the canvas — not totalLeaves×VS.
+    const rightLeaves  = allChildren.slice(0, nRight).reduce((s, c) => s + _subtreeLeaves(c), 0);
+    const leftLeaves   = allChildren.slice(nRight).reduce((s, c) => s + _subtreeLeaves(c), 0);
+    const maxArmLeaves = Math.max(rightLeaves, leftLeaves, 1);
+    const V_SPACING    = Math.max(24, Math.min(52, Math.floor((_height * 0.88) / maxArmLeaves)));
+    const H_SPACING    = 170;  // horizontal distance per depth level (px)
     d3.tree().nodeSize([V_SPACING, H_SPACING])(root);
 
-    // d3.tree: d.x = vertical position, d.y = depth * H_SPACING
-    // Map to screen: x_cart = horizontal, y_cart = vertical
+    // Map d3.tree coordinates → Cartesian screen coordinates.
+    // d.y is depth × H_SPACING (horizontal); d.x is the vertical slot.
     root.each(d => {
       const xSign = d._side === 'left' ? -1 : 1;
       d.x_cart = d.y * xSign;
       d.y_cart = d.x;
     });
 
-    // Translate so root sits at (0, 0) in the centred group
+    // Translate so root sits at (0, 0).
     const rootXC = root.x_cart, rootYC = root.y_cart;
     root.each(d => { d.x_cart -= rootXC; d.y_cart -= rootYC; });
+
+    // Per-arm vertical centering: d3.tree assigns sequential positions to ALL
+    // leaves together, so the arms are stacked (right arm above root, left arm
+    // below) rather than mirrored. Fix: shift each arm independently so its
+    // vertical midpoint lands at y=0, giving a true bilateral mind-map layout.
+    ['right', 'left'].forEach(side => {
+      const arm = root.descendants().filter(d => d._side === side);
+      if (arm.length === 0) return;
+      const ys  = arm.map(d => d.y_cart);
+      const mid = (Math.min(...ys) + Math.max(...ys)) / 2;
+      arm.forEach(d => { d.y_cart -= mid; });
+    });
 
     // Centre the tree in the SVG
     const g = _root.append("g")
@@ -380,6 +423,9 @@ const MindMap = (() => {
         ContextMenu.show(e.clientX, e.clientY, d.data.id);
       })
       .call(_makeDrag(root));
+
+    // Auto-fit when the map changes (new map opened or first load)
+    if (mapChanged) setTimeout(fitToScreen, 50);
   }
 
   // ── Drag-to-reparent ──────────────────────────────────────────────────
@@ -456,9 +502,11 @@ const MindMap = (() => {
   function _renderRelatedLinks(g, descendants) {
     const relG = g.insert("g", ".nodes").attr("class", "related-links");
 
-    // Build a position map and deduplicate bidirectional pairs
+    // Build a position map that also carries the node's arm side.
     const pos = {};
-    descendants.forEach(d => { pos[d.data.id] = { x: d.x_cart, y: d.y_cart }; });
+    descendants.forEach(d => {
+      pos[d.data.id] = { x: d.x_cart, y: d.y_cart, side: d._side || 'center' };
+    });
 
     const drawn = new Set();
     descendants.forEach(d => {
@@ -472,19 +520,36 @@ const MindMap = (() => {
 
         const sx = d.x_cart, sy = d.y_cart;
         const tx = tp.x,     ty = tp.y;
-        // Quadratic bezier arc that bows perpendicular to the straight line
-        const mx = (sx + tx) / 2 - (ty - sy) * 0.25;
-        const my = (sy + ty) / 2 + (tx - sx) * 0.25;
+        const srcSide = pos[d.data.id].side;
+        const tgtSide = tp.side;
+
+        let mx, my;
+        if (srcSide === tgtSide && srcSide !== 'center') {
+          // Same arm: the default perpendicular-bow formula bows INWARD, routing
+          // the arc straight through the tree.  Instead, bow OUTWARD so the link
+          // clears all nodes cleanly.
+          const bowDir = srcSide === 'right' ? 1 : -1;
+          mx = (sx + tx) / 2 + bowDir * Math.abs(ty - sy) * 0.4;
+          my = (sy + ty) / 2;
+        } else {
+          // Cross-arm or either end at root: perpendicular bow (original formula).
+          mx = (sx + tx) / 2 - (ty - sy) * 0.25;
+          my = (sy + ty) / 2 + (tx - sx) * 0.25;
+        }
 
         relG.append("path")
           .attr("class", "related-link")
           .attr("d", `M${sx},${sy} Q${mx},${my} ${tx},${ty}`);
 
         if (link.label) {
+          // Place label at the actual midpoint of the quadratic bezier (t=0.5),
+          // not at the control point, which can be far off the visible curve.
+          const lx = 0.25 * sx + 0.5 * mx + 0.25 * tx;
+          const ly = 0.25 * sy + 0.5 * my + 0.25 * ty;
           relG.append("text")
             .attr("class", "related-link-label")
-            .attr("x", mx)
-            .attr("y", my - 5)
+            .attr("x", lx)
+            .attr("y", ly - 5)
             .attr("text-anchor", "middle")
             .text(link.label);
         }
@@ -500,12 +565,17 @@ const MindMap = (() => {
     descendants.forEach(d => {
       if (!d.data.crossMapLinks || d.data.crossMapLinks.length === 0) return;
 
+      const xSign  = d._side === 'left' ? -1 : 1;
+      const hostR  = d.depth === 0 ? 14 : Math.max(6, 11 - d.depth * 1.2);
+      const ghostR = 10;
+      const nLinks = d.data.crossMapLinks.length;
+
       d.data.crossMapLinks.forEach((link, i) => {
-        // Place ghost as a satellite above/below the host node on its outward side
-        const ghostRadius = 55;
-        const xSign = d._side === 'left' ? -1 : 1;
-        const gx = d.x_cart + xSign * ghostRadius * 0.7;
-        const gy = d.y_cart + (i % 2 === 0 ? -ghostRadius : ghostRadius) * 0.7;
+        // Stack ghosts horizontally outward from the host (beyond the host
+        // circle), distributed vertically and centred on the host's y position.
+        // This keeps ghosts well clear of sibling nodes in the tree.
+        const gx = d.x_cart + xSign * (hostR + ghostR + 18);
+        const gy = d.y_cart + (i - (nLinks - 1) / 2) * 24;
 
         // Dashed link from host to ghost
         ghostG.append("line")
@@ -514,33 +584,45 @@ const MindMap = (() => {
           .attr("x2", gx).attr("y2", gy)
           .attr("stroke", STATUS_COLOR[null]);
 
-        // Ghost circle — fill:transparent so the whole interior is clickable
+        // Ghost circle
         const ghostEl = ghostG.append("circle")
           .attr("class", "ghost-circle")
           .attr("cx", gx).attr("cy", gy)
-          .attr("r", 12)
+          .attr("r", ghostR)
           .attr("stroke", "var(--accent)")
           .style("cursor", "pointer");
 
-        // Tooltip (updated async)
+        // SVG tooltip (updated once title loads)
         ghostEl.append("title").text("Loading…");
 
-        // Visible label below the ghost circle (updated async)
+        // Label on the outward side of the ghost circle, matching the host's
+        // side convention so it never overlaps the tree content.
         const ghostLabel = ghostG.append("text")
-          .attr("x", gx)
-          .attr("y", gy + 22)
-          .attr("text-anchor", "middle")
+          .attr("x", gx + xSign * (ghostR + 5))
+          .attr("y", gy)
+          .attr("text-anchor", xSign > 0 ? "start" : "end")
+          .attr("dominant-baseline", "central")
           .attr("font-size", "9px")
           .attr("fill", "var(--accent)")
           .attr("opacity", 0.75)
           .style("pointer-events", "none")
           .text("…");
 
-        // Load title asynchronously
+        // Arrow icon centred in the ghost circle
+        ghostG.append("text")
+          .attr("x", gx).attr("y", gy)
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr("fill", "var(--accent)")
+          .attr("font-size", "9px")
+          .style("pointer-events", "none")
+          .text("↗");
+
+        // Load remote node title asynchronously
         window.pywebview.api.get_node_title(link.mapId, link.nodeId)
           .then(res => {
-            const mapMeta = Maps.getMaps().find(m => m.id === link.mapId);
-            const mapName = mapMeta ? mapMeta.name : "?";
+            const mapMeta   = Maps.getMaps().find(m => m.id === link.mapId);
+            const mapName   = mapMeta ? mapMeta.name : "?";
             const nodeTitle = res.title || "(unknown)";
             ghostEl.select("title").text(`${mapName} → ${nodeTitle}`);
             const truncated = nodeTitle.length > 14 ? nodeTitle.slice(0, 14) + "…" : nodeTitle;
@@ -553,16 +635,6 @@ const MindMap = (() => {
           e.stopPropagation();
           Maps.navigateTo(link.mapId, link.nodeId);
         });
-
-        // Small arrow icon (non-interactive)
-        ghostG.append("text")
-          .attr("x", gx).attr("y", gy)
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "central")
-          .attr("fill", "var(--accent)")
-          .attr("font-size", "10px")
-          .style("pointer-events", "none")
-          .text("↗");
       });
     });
   }
@@ -588,11 +660,34 @@ const MindMap = (() => {
   }
 
   function fitToScreen() {
-    const k = 0.85;
+    const pad = 50;
+    const pts = [];
+    _root.selectAll(".node-group").each(d => pts.push([d.x_cart, d.y_cart]));
+    // Ghost nodes extend beyond the tree bounding box — include them so they
+    // are never clipped after a fit-to-screen.
+    _root.selectAll(".ghost-circle").each(function() {
+      pts.push([+d3.select(this).attr("cx"), +d3.select(this).attr("cy")]);
+    });
+    if (pts.length === 0) {
+      _svg.transition().duration(400)
+        .call(_zoom.transform, d3.zoomIdentity.translate(_width / 2, _height / 2));
+      return;
+    }
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const treeW = (maxX - minX) || 1;
+    const treeH = (maxY - minY) || 1;
+    const k  = Math.min(0.95, Math.min((_width - pad * 2) / treeW, (_height - pad * 2) / treeH));
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    // The render group is offset by (width/2, height/2), so:
+    // screen_pos = translate + k × (width/2 + x_cart, height/2 + y_cart)
+    // Solve for translate that centres the bounding box midpoint on screen:
+    const tx = _width  / 2 * (1 - k) - k * cx;
+    const ty = _height / 2 * (1 - k) - k * cy;
     _svg.transition().duration(400)
-      .call(_zoom.transform, d3.zoomIdentity
-        .translate(_width / 2 * (1 - k), _height / 2 * (1 - k))
-        .scale(k));
+      .call(_zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
   }
 
   // ── Dim control (from search/filter) ─────────────────────────────────

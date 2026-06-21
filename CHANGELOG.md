@@ -3,6 +3,33 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.5] - 2026-06-21
+
+### Fixed
+- Related link labels now sit on the visible arc rather than at the bezier control point, which could be far off-curve when the outward-bow routing is active
+- Dropbox settings instructions now list the three required permission scopes (`files.content.write`, `files.content.read`, `files.metadata.read`) and remind users to re-generate their access token after enabling them
+
+## [1.4.4] - 2026-06-21
+
+### Fixed
+- Related links between two nodes on the same arm no longer arc through the tree; the bezier now bows outward (away from the centre) so the connection routes cleanly around the tree content. Cross-arm and root-adjacent links are unaffected.
+
+## [1.4.3] - 2026-06-21
+
+### Changed
+- **Bilateral mind-map layout is now a true mirror layout**: each arm's vertical span is now independently centred around the root, so both sides fan out symmetrically regardless of size (previously the arms were stacked — right arm above root, left arm below)
+- **Bilateral split is now weight-balanced**: the root's children are split at the index that minimises the leaf-count difference between the two arms, rather than splitting by child count — so heavy subtrees are distributed evenly left and right
+- V_SPACING is now derived from the heavier arm's leaf count (not the total), so each arm fits the canvas independently at the largest comfortable spacing
+- Cross-map ghost nodes are now placed cleanly outward from their host circle (not at an arbitrary diagonal), stacked vertically and centred on the host; labels appear on the outward side matching the host's direction rather than below the ghost
+- "Fit to screen" now includes cross-map ghost node positions in its bounding box so ghosts are never clipped after a fit
+
+## [1.4.2] - 2026-06-21
+
+### Changed
+- Mind map vertical spacing is now adaptive: it compresses when there are many nodes so large trees no longer run off-screen, while small trees keep generous spacing (range: 24–52 px based on leaf count and canvas height)
+- "Fit to screen" button now correctly computes the actual bounding box of the rendered tree and centres it at the right scale, rather than always zooming to a fixed 85%
+- Maps now auto-fit to screen when first opened or when switching between maps
+
 ## [1.4.1] - 2026-06-07
 
 ### Fixed

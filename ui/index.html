@@ -565,7 +565,7 @@
 
           <div class="settings-section">
             <div class="settings-section-title">Dropbox Sync</div>
-            <p class="settings-description">Back up and restore your maps, tasks, and config to Dropbox. You need a <a id="dbx-dev-link" href="#">Dropbox developer app</a> — create one at dropbox.com/developers/apps (use &ldquo;App folder&rdquo; access), then copy its App key and App secret below.</p>
+            <p class="settings-description">Back up and restore your maps, tasks, and config to Dropbox. You need a <a id="dbx-dev-link" href="#">Dropbox developer app</a> — create one at dropbox.com/developers/apps (use &ldquo;App folder&rdquo; access). Under the app&rsquo;s <strong>Permissions</strong> tab, enable <code>files.content.write</code>, <code>files.content.read</code>, and <code>files.metadata.read</code>, then re-generate your access token before connecting.</p>
 
             <!-- Pre-connection fields (hidden once connected) -->
             <div id="dbx-setup-rows">
